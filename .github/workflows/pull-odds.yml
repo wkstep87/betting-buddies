@@ -1,0 +1,14 @@
+name: Pull Odds (q2h)
+
+on:
+  schedule:
+    - cron: "7 */2 * * *"   # every 2 hours at :07 UTC
+  workflow_dispatch:        # allow manual run from Actions tab
+
+jobs:
+  pull:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Invoke pull-odds Edge Function
+        run: |
+          curl -sS -X POST "https://umsvkzizysmdobgvjzfc.functions.supabase.co/pull-odds" -H "Content-Length: 0"
