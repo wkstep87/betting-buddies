@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: Invoke pull-odds Edge Function
         env:
-          URL: "https://umsvkzizysmdobgvjzfc.supabase.co/functions/v1/pull-odds"
+          URL: "https://umsvkzizysmdobgvjzfc.supabase.co/functions/v1/dynamic-api"
           AUTH: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
           set -e
