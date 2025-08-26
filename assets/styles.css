@@ -1,0 +1,1289 @@
+:root{--bg:#0b0f14;--panel:#111723;--muted:#7a8aa0;--text:#e6eef8;--accent:#4fc3f7;--win:#1db954;--loss:#ff5c5c;--border:#1e2a3a}*{box-sizing:border-box}html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}a{color:var(--accent);text-decoration:none}header{position:sticky;top:0;z-index:10;background:rgba(11,15,20,.9);backdrop-filter: blur(6px);border-bottom:1px solid var(--border)}.nav{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:20px;padding:14px 16px}.nav .brand{font-weight:700;letter-spacing:.4px}.nav .spacer{flex:1}main{max-width:1100px;margin:0 auto;padding:20px 16px}.card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;box-shadow:0 0 0 1px rgba(255,255,255,0.02),0 8px 24px rgba(0,0,0,.35)}.table{width:100%;border-collapse:collapse}.table th,.table td{padding:10px;border-bottom:1px solid var(--border);text-align:center;font-size:14px}.table thead th{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}.badge{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid var(--border);color:var(--muted);font-size:12px}.select,.btn{background:#0e141d;color:var(--text);border:1px solid var(--border);border-radius:10px;padding:8px 10px;font-size:14px}.row-team{display:flex;align-items:center;gap:8px;justify-content:center}.team-logo{width:22px;height:22px;border-radius:50%;background:#263241;border:1px solid var(--border);display:inline-grid;place-items:center;font-weight:700;font-size:11px;color:#9fb6d1}.footer-note{color:var(--muted);font-size:12px;margin-top:8px}.kpi{display:flex;gap:10px;flex-wrap:wrap}.kpi .chip{background:#0e141d;border:1px solid var(--border);padding:8px 12px;border-radius:12px;color:var(--muted);font-size:13px}.toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap}.lock{display:flex;align-items:center;gap:8px}input[type='text'],input[type='number']{background:#0e141d;border:1px solid var(--border);border-radius:10px;padding:8px 10px;color:var(--text)}.notice{background:#152233;border:1px solid var(--border);padding:10px;border-radius:10px;color:#bcd}.toast{position:fixed;bottom:16px;right:16px;background:#152233;border:1px solid var(--border);padding:10px 14px;border-radius:10px;display:none}
+/* === Align Matchup into 3 fixed columns (Away | @ | Home) === */
+.matchup-grid {
+  display: grid;
+  grid-template-columns: 1fr 28px 1fr;
+  column-gap: 8px;
+  align-items: center;
+}
+
+.matchup-away {
+  display: flex;
+  justify-content: flex-end;  /* right align content */
+  align-items: center;
+}
+.matchup-home {
+  display: flex;
+  justify-content: flex-start; /* left align content */
+  align-items: center;
+}
+
+
+/* Normalize team chip layout */
+.team-cell {
+  display: inline-flex;
+  align-items: center;
+}
+.team-cell img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  border-radius: 50%;
+  margin-right: 2px;
+  background: #fff; /* optional: helps inconsistent PNG edges */
+}
+
+/* === Your Pick dropdowns: uniform width and centered text === */
+.pick-select {
+  width: 240px;              /* wide enough for “Washington Commanders” */
+  text-align: center;        /* fallback centering */
+  text-align-last: center;   /* centers selected value in most browsers */
+}
+
+/* Keep table cells tidy and vertically centered */
+.table td {
+  vertical-align: middle;
+}
+.table td:nth-child(1),
+.table td:nth-child(3) {
+  padding-left: 14px;  /* make col 1 (Matchup) and col 3 (Your Pick) consistent */
+}
+/* Make spread text a bit larger and white */
+.badge {
+  font-size: .8rem;   /* bump size up slightly (adjust if needed) */
+  color: #fff;       /* white text */
+}
+/* Add breathing room between logo and text */
+.matchup-away img {
+  margin-left: 6px;   /* space between away team text and its logo */
+}
+
+.matchup-home img {
+  margin-right: 6px;  /* space between logo and home team text */
+}
+/* ===== Group page extras ===== */
+
+/* Subtable inside expanded row */
+.subtable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+  font-size: 14px;
+}
+.subtable th, .subtable td {
+  border-bottom: 1px solid #2a2a2a;
+  padding: 6px 8px;
+}
+
+/* Consensus pill (team + small logo) */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #1f2937; /* slate-800-ish */
+  color: #fff;
+  font-size: 14px;
+}
+
+/* Strength bar */
+.strength {
+  width: 100%;
+}
+.strength-track {
+  width: 100%;
+  height: 14px;
+  border-radius: 999px;
+  background: #1f2430;
+  overflow: hidden;
+}
+.strength-fill {
+  height: 100%;
+  width: 0%;
+  background: #22c55e; /* green-500 */
+  transition: width 240ms ease;
+}
+
+/* Matchup layout (already on Picks; duplicated here to be safe) */
+.matchup-grid {
+  display: grid;
+  grid-template-columns: 1fr 28px 1fr;
+  column-gap: 8px;
+  align-items: center;
+}
+.matchup-away {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+.matchup-home {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+/* Logo spacing near text */
+.matchup-away img { margin-left: 6px; }
+.matchup-home img { margin-right: 6px; }
+/* ===== User status row (right side of toolbar) ===== */
+.user-status {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+}
+.user-chip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  line-height: 1;
+  color: #fff;
+  border: 1px solid transparent;
+}
+.user-chip.ok {
+  background: #16a34a;   /* green-600 */
+  border-color: #15803d;
+}
+.user-chip.miss {
+  background: #dc2626;   /* red-600 */
+  border-color: #b91c1c;
+}
+.user-chip {
+  transition: background 0.2s;
+}
+.user-chip:hover {
+  opacity: 0.85;
+}
+/* clickable consensus pill */
+.clickable-pill { cursor: pointer; transition: opacity 0.15s ease; }
+.clickable-pill:hover { opacity: 0.9; }
+
+/* modal table minor polish */
+#userPicksModal .subtable th,
+#userPicksModal .subtable td {
+  border-bottom: 1px solid #262626;
+}
+/* Center Team and Confidence columns in the modal */
+#userPicksModal .subtable td:nth-child(2),
+#userPicksModal .subtable td:nth-child(3),
+#userPicksModal .subtable th:nth-child(2),
+#userPicksModal .subtable th:nth-child(3) {
+  text-align: center;
+}
+
+/* Center confidence values in the modal */
+#userPicksModal .subtable td:nth-child(3),
+#userPicksModal .subtable th:nth-child(3) {
+  text-align: center;
+}
+
+/* ===== Standings / Leaderboard styling ===== */
+
+.rank-row {
+  border-left: 6px solid var(--rank-color, #374151);
+  background: rgba(0,0,0,0.15);
+}
+.rank-head {
+  background: rgba(0,0,0,0.25);
+  border-bottom: 1px solid #2a2a2a;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  border-left: 6px solid var(--rank-color, #374151);
+}
+
+/* Weekly grid small polish */
+#weekly-grid th, #weekly-grid td {
+  white-space: nowrap;
+}
+#weekly-grid tfoot td {
+  font-weight: 600;
+}
+/* ===== Bankroll ===== */
+.settings {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(120px, 1fr));
+  gap: 10px;
+  margin: 10px 0 16px;
+}
+.summary-card {
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 10px;
+  padding: 10px;
+}
+.summary-card .summary-title { font-size: 12px; color: #9ca3af; }
+.summary-card .summary-value { font-size: 20px; font-weight: 700; }
+.summary-card.highlight { background: #0b1220; border-color: #243050; }
+
+.input { width: 100%; padding: 6px 8px; background:#0b0f17; color:#e5e7eb; border:1px solid #1f2937; border-radius:6px; }
+.input.small { width: 100%; padding: 4px 6px; }
+.input.tiny { width: 100%; padding: 2px 6px; font-size: 12px; }
+.select.small { padding: 4px 6px; }
+.btn.tiny { padding: 2px 6px; font-size: 12px; border-radius: 6px; }
+.btn.danger { background:#7f1d1d; border-color:#991b1b; }
+.muted.tiny { font-size: 11px; opacity: 0.7; }
+
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+@media (max-width: 800px) {
+  .settings { grid-template-columns: 1fr; }
+  .summary-grid { grid-template-columns: repeat(2, 1fr); }
+  .grid2 { grid-template-columns: 1fr; }
+}
+/* space consensus pill + add bet button */
+td > .pill + .btn.tiny { margin-left: 8px; }
+/* Dedicated Add Bet column sizing */
+.table td:nth-child(3) button.btn.tiny {
+  min-width: 84px;
+}
+.btn.tiny {
+  cursor: pointer;
+}
+.btn.tiny:hover {
+  opacity: 0.9;
+  box-shadow: 0 0 4px rgba(255,255,255,0.25);
+}
+addBtn.title = 'Prefill in Bankroll';
+/* ===== Bankroll CTA hovers (Add Wager / Save Settings) ===== */
+#btn-add.btn.btn-primary,
+#btn-save-settings.btn {
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease,
+              box-shadow .15s ease, transform .05s ease;
+}
+
+/* + Add Wager (primary) — brighter + glow */
+#btn-add.btn.btn-primary:hover {
+  background: #2563eb;          /* brighter blue */
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,.35);
+  transform: translateY(-1px);
+}
+
+/* Save Settings (secondary) — high-contrast hover */
+#btn-save-settings.btn:hover {
+  background: #374151;          /* lighter than card/bg, clear contrast */
+  border-color: #4b5563;
+  color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(148,163,184,.28);
+  transform: translateY(-1px);
+}
+
+/* Press feedback */
+#btn-add.btn.btn-primary:active,
+#btn-save-settings.btn:active {
+  transform: translateY(0);
+  box-shadow: 0 0 0 2px rgba(148,163,184,.22);
+}
+
+/* Bankroll numeric alignment */
+#ledger th:nth-last-child(4), /* Odds */
+#ledger th:nth-last-child(3), /* Stake */
+#ledger th:nth-last-child(2)  /* Payout */ { text-align: right; }
+#ledger td:nth-last-child(4),
+#ledger td:nth-last-child(3),
+#ledger td:nth-last-child(2) { text-align: right; }
+
+/* Editable money field styled like summary-value */
+.editable-money {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem; /* same as summary-value text */
+  font-weight: 600;
+}
+.editable-money span {
+  margin-right: 4px;
+}
+.editable-money input {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: inherit;
+  font-weight: inherit;
+  color: #fff;
+  text-align: left;
+  width: 100px;
+}
+.editable-money input:focus {
+  border-bottom: 1px solid #3b82f6; /* subtle indicator */
+}
+/* Editable money field styled like summary-value */
+.editable-money {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;  /* match summary-value size */
+  font-weight: 600;
+}
+.editable-money span { margin-right: 4px; }
+.editable-money input {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: inherit;
+  font-weight: inherit;
+  color: #fff;
+  text-align: left;   /* left-justify like $900.00 */
+  width: 120px;
+}
+.editable-money input:focus {
+  border-bottom: 1px solid #3b82f6; /* subtle focus cue */
+}
+/* Picks: partial warning */
+.partial-note {
+  background: #3b3a1a;
+  border: 1px solid #eab308;
+  color: #fde68a;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+/* Group: user chip = partial (yellow) */
+.user-chip.partial {
+  background: #eab308;
+  color: #111;
+  border-color: #a16207;
+}
+/* === ESPN logo polish (applies everywhere logos are used) === */
+.team-cell img,
+.matchup-away img,
+.matchup-home img,
+.pill img {
+  width: 40px;         /* slightly bigger than before */
+  height: 40px;
+  object-fit: contain;
+  border-radius: 50%;  /* circular frame */
+  background: #fff;    /* white backing ring */
+  padding: 2px;        /* creates subtle border around the PNG */
+  box-shadow: 0 0 2px rgba(0,0,0,0.6); /* soft edge on dark bg */
+}
+.team-select option[value=""] { color: #94a3b8; }
+/* ===== Mobile helpers ===== */
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;          /* horizontal scroll when needed */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Slightly tighter cells on small screens */
+@media (max-width: 820px) {
+  .nav { gap: 12px; }
+  .table th, .table td { padding: 8px 6px; font-size: 13px; }
+  .badge { font-size: 12px; }
+  .pill { font-size: 13px; padding: 4px 8px; }
+  .strength-track { height: 12px; }
+  .toolbar { gap: 8px; }
+}
+
+/* Phone layout */
+@media (max-width: 600px) {
+  /* Stack toolbar neatly */
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .toolbar > div { width: 100%; }
+
+  /* Matchup columns: let names wrap; keep "@" narrow */
+  .matchup-grid {
+    grid-template-columns: 1fr 22px 1fr;   /* away | @ | home */
+    column-gap: 6px;
+  }
+
+  /* Picks page selects: full width & centered value */
+  .pick-select,
+  select.conf,
+  .team-select {
+    width: 100%;
+    text-align: center;
+    text-align-last: center;
+  }
+
+  /* Trim left/right padding so columns line up better */
+  .table td:nth-child(1),
+  .table td:nth-child(3) { padding-left: 6px; }
+
+  /* Group page: give Consensus more room, keep Add Bet narrow */
+  .table td:nth-child(2) { min-width: 220px; }     /* Consensus */
+  .table td:nth-child(3) { width: 86px; }          /* Add Bet */
+
+  /* Bankroll: settings grid becomes single column (already responsive, tighten spacing) */
+  .settings { gap: 8px; }
+  .summary-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+
+  /* Ledger numeric columns readable on phones */
+  #ledger th, #ledger td { white-space: nowrap; }
+}
+
+/* Very narrow phones */
+@media (max-width: 420px) {
+  .table th, .table td { padding: 7px 5px; font-size: 12px; }
+  .matchup-grid { grid-template-columns: 1fr 20px 1fr; }
+  .pill { padding: 3px 7px; }
+  .strength-track { height: 10px; }
+}
+/* ===== Mobile, logo-first layout ===== */
+@media (max-width: 600px) {
+  /* Hide long team names; show only the round logos */
+  .team-name { display: none !important; }
+
+  /* Consensus pill: hide the text label, keep the small logo circle */
+  .pill span { display: none; }
+
+  /* Your Pick select: keep it usable but visually minimal.
+     Logo preview (pick-logo) becomes the main visual. */
+  .team-select {
+    max-width: 1px;       /* collapse width */
+    opacity: 1.00;        /* nearly hidden but focusable */
+    position: relative;
+    z-index: 1;           /* keeps it interactive */
+  }
+  .pick-logo {
+    display: inline-block;
+  }
+
+  /* Matchup '@' column stays narrow */
+  .matchup-grid { grid-template-columns: 1fr 20px 1fr; }
+
+  /* Standings: make "User" header/column fit content */
+  #leaderboard th:nth-child(2),
+  #leaderboard td:nth-child(2) {
+    width: 1%;
+    white-space: nowrap;
+  }
+
+  /* Standings weekly grid: minimize padding & let columns fit */
+  #weekly-grid th, #weekly-grid td {
+    white-space: nowrap;
+    padding-left: 8px; padding-right: 8px;
+  }
+}
+
+/* Slightly larger phones */
+@media (max-width: 820px) {
+  /* Crop "User" a bit on tablets too */
+  #leaderboard th:nth-child(2),
+  #leaderboard td:nth-child(2) { width: 1%; white-space: nowrap; }
+}
+
+/* ===== Bankroll: keep only Description, Status, Delete on phones ===== */
+@media (max-width: 600px) {
+  /* Assuming ledger columns: 
+     1 Placed | 2 Week | 3 Type | 4 Description | 5 Odds | 6 Stake | 7 Status | 8 Payout | 9 override | 10 Delete
+     Hide 1,2,3,5,6,8,9; keep 4,7,10
+  */
+  #ledger th:nth-child(1),
+  #ledger th:nth-child(2),
+  #ledger th:nth-child(3),
+  #ledger th:nth-child(5),
+  #ledger th:nth-child(6),
+  #ledger th:nth-child(8),
+  #ledger th:nth-child(9),
+  #ledger td:nth-child(1),
+  #ledger td:nth-child(2),
+  #ledger td:nth-child(3),
+  #ledger td:nth-child(5),
+  #ledger td:nth-child(6),
+  #ledger td:nth-child(8),
+  #ledger td:nth-child(9) { display: none; }
+
+  /* Make Description breathe; keep Status centered; keep Delete visible */
+  #ledger th:nth-child(4), #ledger td:nth-child(4) { width: auto; }
+  #ledger th:nth-child(7), #ledger td:nth-child(7) { text-align: center; }
+  #ledger th:last-child,   #ledger td:last-child   { text-align: right; }
+}
+/* ---------- MOBILE TIGHT MODE ---------- */
+@media (max-width: 480px) {
+  /* Make tables pack tighter */
+  .table { table-layout: fixed; }
+  .table th, .table td { padding: 6px 6px; }
+
+  /* Hide long team names we wrapped in .team-name */
+  .team-name { display: none; }
+
+  /* Picks: tighter column widths */
+  .page-picks .table th:nth-child(1) { width: 34%; }  /* Matchup */
+  .page-picks .table th:nth-child(2) { width: 16%; }  /* Home Spread */
+  .page-picks .table th:nth-child(3) { width: 32%; }  /* Your Pick */
+  .page-picks .table th:nth-child(4) { width: 18%; }  /* Confidence */
+
+  /* Make the matchup logos compact */
+  .matchup-grid { grid-template-columns: 28px 16px 28px; column-gap: 6px; }
+  .team-logo, .pick-logo { width: 18px; height: 18px; }
+
+  /* Compact selects */
+  .select.compact { padding: 4px 6px; min-height: 30px; font-size: 13px; }
+  .select.conf { min-width: 52px; } /* confidence */
+
+  /* Group page: tighter columns + rename header to "Pick" */
+  .page-group .table th:nth-child(1) { width: 36%; } /* Matchup */
+  .page-group .table th:nth-child(2) { width: 28%; } /* Consensus */
+  .page-group .table th:nth-child(3) { width: 16%; } /* Add Bet btn */
+  .page-group .table th:nth-child(4) { width: 10%; } /* Net */
+  .page-group .table th:nth-child(5) { width: 10%; } /* Strength */
+
+  /* Replace "Consensus Pick" header visually */
+  .page-group .table th:nth-child(2) { position: relative; color: transparent; }
+  .page-group .table th:nth-child(2)::after {
+    content: "Pick"; position: absolute; inset: 0; color: var(--muted); text-align: center;
+  }
+
+  /* User picks modal: make body scrollable so 2 and 1 are visible */
+  #userPicksModal .modal-scroll {
+    max-height: 60vh; overflow: auto;
+  }
+
+  /* Standings: compress "User" on leaderboard + first column in weekly grid */
+  .leaderboard table { table-layout: fixed; }
+  .leaderboard th:nth-child(2), .leaderboard td:nth-child(2) { /* User */
+    width: 1%; white-space: nowrap;
+  }
+  #weekly-grid th:first-child, #weekly-grid td:first-child { /* "Week" column */
+    width: 1%; white-space: nowrap;
+  }
+
+  /* Bankroll ledger: show only Side(=Description), Odds, Stake, Status, Payout, Delete */
+  #ledger th:nth-child(1), #ledger td:nth-child(1),  /* Placed */
+  #ledger th:nth-child(2), #ledger td:nth-child(2),  /* Week */
+  #ledger th:nth-child(3), #ledger td:nth-child(3)   /* Type */
+  { display: none; }
+
+  /* Visually rename "Description" header to "Side" */
+#ledger th:nth-child(4) { position: relative; color: transparent; text-align: center; }
+#ledger th:nth-child(4)::after {
+  content: "Side";
+  position: absolute;
+  inset: 0;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;  /* centers text horizontally */
+  text-align: center;
+}
+
+
+  /* Slightly more room for Side on mobile */
+  #ledger th:nth-child(4), #ledger td:nth-child(4) { width: 36%; }
+}
+@media (max-width: 480px) {
+  #weekly-grid th, #weekly-grid td { padding: 6px 4px; }
+  #weekly-grid th:not(:first-child), #weekly-grid td:not(:first-child) {
+    width: 1%; white-space: nowrap;
+  }
+}
+@media (max-width: 600px) {
+  th.consensus-th, td:nth-child(2) {
+    width: 100px !important;
+    max-width: 100px;
+    text-align: center;
+  }
+  .pill { padding: 2px 4px; font-size: 12px; }
+}
+@media (max-width: 600px) {
+  #leaderboard, #weekly-grid {
+    table-layout: fixed;
+    width: 100%;
+  }
+  #leaderboard th, #leaderboard td,
+  #weekly-grid th, #weekly-grid td {
+    padding: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #leaderboard th:first-child, #leaderboard td:first-child {
+    width: 36px; /* Rank */
+  }
+  #leaderboard th:nth-child(2), #leaderboard td:nth-child(2) {
+    max-width: 80px; /* Username */
+  }
+}
+@media (max-width: 600px) {
+  #ledger th, #ledger td { font-size: 12px; padding: 4px; }
+
+  #ledger th:nth-child(4), #ledger td:nth-child(4) { /* Side */
+    max-width: 80px; width: 80px;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  #ledger th:nth-child(5), #ledger td:nth-child(5) { width: 50px; }
+  #ledger th:nth-child(6), #ledger td:nth-child(6) { width: 60px; }
+  #ledger th:nth-child(7), #ledger td:nth-child(7) { width: 70px; }
+  #ledger th:nth-child(8), #ledger td:nth-child(8) { width: 70px; }
+  #ledger th:nth-child(9), #ledger td:nth-child(9) { width: 60px; }
+}
+/* Picks table: mobile column widths */
+@media (max-width: 480px) {
+  /* Let the browser use fixed layout and our explicit widths */
+  .table.picks { table-layout: fixed; width: 100%; }
+
+  /* Tighter padding overall */
+  .table.picks th,
+  .table.picks td { padding-left: 6px; padding-right: 6px; }
+
+  /* Column widths (Matchup | Home Spread | Your Pick | Confidence) */
+  .table.picks th:nth-child(1), .table.picks td:nth-child(1) { width: 46%; }
+  .table.picks th:nth-child(2), .table.picks td:nth-child(2) { width: 20%; }
+  .table.picks th:nth-child(3), .table.picks td:nth-child(3) { width: 22%; } /* <-- Your Pick */
+  .table.picks th:nth-child(4), .table.picks td:nth-child(4) { width: 12%; }
+
+  /* Keep the Your Pick cell from wrapping/squishing */
+  .table.picks td:nth-child(3) { white-space: nowrap; }
+
+  /* Make sure the select itself can't shrink smaller than the text */
+  .pick-select {
+    display: inline-block;
+    width: 68px;
+    min-width: 68px;
+    padding: 6px 4px;
+    text-align: center;
+    text-align-last: center;
+  }
+}
+/* ------- Picks table: tight mobile widths ------- */
+@media (max-width: 480px) {
+  /* column widths */
+  .table.picks td:nth-child(1), .table.picks th:nth-child(1) { width: 96px;  }  /* Matchup logos */
+  .table.picks td:nth-child(2), .table.picks th:nth-child(2) { width: 66px;  }  /* Home Spread */
+  .table.picks td:nth-child(3), .table.picks th:nth-child(3) { width: 64px;  }  /* Your Pick (abbr) */
+  .table.picks td:nth-child(4), .table.picks th:nth-child(4) { width: 64px;  }  /* Confidence */
+
+  /* selects sized to fit three letters / 2-digit numbers */
+  .table.picks .pick-select,
+  .table.picks .conf {
+    width: 64px;
+    min-width: 64px;
+    max-width: 64px;
+    padding: 6px 6px;
+    text-align: center;
+    text-align-last: center; /* center selected text */
+  }
+
+  /* keep cells snug */
+  .table.picks td { padding: 8px 6px; }
+  .table.picks th { padding: 6px; }
+}
+/* Mobile: show an abbreviation-sized Your Pick column */
+@media (max-width: 768px) {
+  .team-select {
+    max-width: 56px;        /* room for 3–4 chars */
+    opacity: 1;             /* visible */
+    text-align: center;
+    text-align-last: center;
+    padding-inline: 6px;
+  }
+  /* keep confidence readable on mobile */
+  .table td:nth-child(4) select.conf {
+    min-width: 64px;
+  }
+}
+/* Responsive helpers */
+@media (max-width: 700px) {
+  .hide-mobile { display: none !important; }
+}
+@media (min-width: 701px) {
+  .hide-mobile { display: inline !important; }
+}
+/* ===== Mobile table tightening for GROUP page ===== */
+@media (max-width: 700px) {
+  /* Show/hide helpers */
+  .hide-mobile { display: none !important; }
+  .show-mobile { display: inline !important; }
+
+  /* Use fixed layout so widths are respected */
+  .table {
+    table-layout: fixed;
+  }
+
+  /* Tighten row height a bit */
+  .table th, .table td {
+    padding: 8px 6px;
+    font-size: 13px;
+  }
+
+  /* Column widths (Matchup | Pick | Add | Net | Strength) */
+  /* 1) Matchup ~12ch */
+  .table thead th:nth-child(1),
+  .table tbody td:nth-child(1) {
+    width: 12ch;
+  }
+
+  /* 2) Pick ~15ch */
+  .table thead th:nth-child(2),
+  .table tbody td:nth-child(2) {
+    width: 15ch;
+  }
+
+  /* 3) Add Bet (leave as-is, button already small) */
+
+  /* 4) Net ~4ch (protect it so bar doesn't intrude) */
+  .table thead th:nth-child(4),
+  .table tbody td:nth-child(4) {
+    width: 4ch;
+    white-space: nowrap;
+  }
+
+  /* 5) Strength — take the remaining space cleanly */
+  .table thead th:nth-child(5),
+  .table tbody td:nth-child(5) {
+    width: auto;
+  }
+
+  /* Make the logos in the matchup smaller for mobile */
+  .matchup-away img,
+  .matchup-home img {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* Keep the matchup grid compact */
+  .matchup-grid {
+    grid-template-columns: 1fr 16px 1fr; /* logos | @ | logos */
+    column-gap: 4px;
+  }
+
+  /* Pill text should never blow the column */
+  .pill {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    justify-content: center;
+    gap: 4px;
+    padding: 3px 6px;
+  }
+
+  /* Strength bar never spills horizontally */
+  .strength-track {
+    height: 12px;
+  }
+}
+pickNameEl.textContent = fullTeamName;              // e.g., "Kansas City Chiefs"
+pickAbbrEl.textContent = TEAM_LOGOS[fullTeamName];  // e.g., "KC"
+.table td.col-pick .pick-name { display: inline; }
+.table td.col-pick .pick-abbr { display: none; }
+@media (max-width: 900px), (hover: none) and (pointer: coarse) {
+  .table th, .table td { padding: 8px 6px; font-size: 13px; }
+
+  /* ~12 characters for matchup */
+  .table th.col-matchup, .table td.col-matchup {
+    width: 12ch; max-width: 12ch; white-space: nowrap;
+  }
+  /* if you wrapped team names in matchup, hide them on mobile */
+  .table td.col-matchup .match-name { display: none; }
+
+  /* ~15 characters for pick; show abbr, hide full name */
+  .table th.col-pick, .table td.col-pick {
+    width: 15ch; max-width: 15ch; white-space: nowrap;
+  }
+  .table td.col-pick .pick-name { display: none; }
+  .table td.col-pick .pick-abbr { display: inline; }
+
+  /* Net fixed to ~4 characters, right aligned */
+  .table th.col-net, .table td.col-net {
+    width: 4ch; max-width: 4ch; white-space: nowrap; text-align: right;
+  }
+
+  /* Strength takes remaining space */
+  .table th.col-strength, .table td.col-strength { width: auto; }
+  .strength { width: 100%; }
+  .strength-track { width: 100%; height: 16px; }
+}
+
+
+
+/* ===== Mobile visibility helpers (fix header duplication) ===== */
+.hide-mobile { display: inline; }
+.show-mobile { display: none; }
+@media (max-width: 700px) {
+  .hide-mobile { display: none !important; }
+  .show-mobile { display: inline !important; }
+}
+
+/* ===== Consensus cell: switch name/abbr depending on viewport ===== */
+.pill .name { display: inline; }
+.pill .abbr { display: none; font-weight: 600; letter-spacing: .3px; }
+@media (max-width: 700px) {
+  .pill .name { display: none; }
+  .pill .abbr { display: inline; }
+}
+
+/* ===== Group table column sizing ===== */
+.table thead th.col-net { width: 56px; }
+.table thead th.col-strength { width: 220px; }
+@media (max-width: 700px) {
+  .table thead th.col-matchup { width: 12ch; }
+  .table thead th.col-net { width: 48px; }
+  .table thead th.col-strength { width: 180px; }
+}
+
+/* Strength bar track should fill the whole cell */
+.col-strength .strength-track { width: 100%; }
+/* ===== FINAL OVERRIDES (place at very end of styles.css) ===== */
+
+/* Single source of truth for mobile/desktop visibility */
+.hide-mobile { display: inline !important; }
+.show-mobile { display: none !important; }
+
+@media (max-width: 700px) {
+  .hide-mobile { display: none !important; }
+  .show-mobile { display: inline !important; }
+}
+
+/* Consensus cell: show team name on desktop, abbr on mobile */
+.pick-name { display: inline !important; }
+.pick-abbr { display: none !important; }
+@media (max-width: 700px) {
+  .pick-name { display: none !important; }
+  .pick-abbr { display: inline !important; }
+}
+
+/* Web-only: give matchup a touch more room for long names */
+@media (min-width: 701px) {
+  .table .matchup-grid {
+    grid-template-columns: 260px 28px 260px !important; /* was ~220/28/220 */
+  }
+}
+/* ==== Desktop vs Mobile visibility (controlled by body.is-mobile) ==== */
+.only-mobile { display: none; }
+.only-desktop { display: inline; }
+body.is-mobile .only-mobile { display: inline; }
+body.is-mobile .only-desktop { display: none; }
+
+/* ==== Group table column sizing (stable across orientations) ==== */
+.col-matchup  { width: 44%; }   /* give Commanders enough room on desktop */
+.col-pick     { width: 24%; }   /* holds logo + text/abbr pill */
+.col-add      { width: 18%; }   /* “Add Bet” button */
+.col-net      { width: 7%;  text-align: right; }
+.col-strength { width: 7%; }
+
+/* tighter on small phones */
+@media (max-width: 820px) {
+  .col-matchup  { width: 42%; }
+  .col-pick     { width: 26%; }
+  .col-add      { width: 16%; }
+  .col-net      { width: 8%;  }
+  .col-strength { width: 8%;  }
+}
+
+/* Consensus pill layout (works for both full-name and abbr) */
+.pill-consensus {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #1f2937;
+  color: #fff;
+  white-space: nowrap;
+}
+.pill-consensus .pill-logo {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: contain;
+  background: #fff;
+}
+
+/* Strength cell: bar always fills available horizontal space */
+.strength-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.strength-track {
+  flex: 1 1 auto;         /* this is what makes it stretch to the end */
+  height: 14px;
+  border-radius: 999px;
+  background: #1f2430;
+  overflow: hidden;
+}
+.strength-fill {
+  height: 100%;
+  width: 0%;
+  transition: width 240ms ease;
+}
+/* ----- Mobile / desktop visibility for header text and pill text ----- */
+.hide-mobile { display: inline; }
+.show-mobile { display: none; }
+
+@media (max-width: 820px) {
+  .hide-mobile { display: none !important; }
+  .show-mobile { display: inline !important; }
+}
+
+/* ----- Group table layout: fixed columns to prevent overlap ----- */
+.group-table { table-layout: fixed; width: 100%; }
+
+/* Desktop-ish widths (>=821px) */
+.group-table th.col-matchup   { width: 36%; }
+.group-table th.col-pick      { width: 26%; }
+.group-table th.col-action    { width: 120px; } /* Add Bet */
+.group-table th.col-net       { width: 8ch; text-align: right; }
+.group-table th.col-strength  { width: auto; }
+
+/* Mobile (<=820px): tighter columns, abbr pills, small button */
+@media (max-width: 820px) {
+  .group-table th.col-matchup   { width: 44%; }
+  .group-table th.col-pick      { width: 20%; }
+  .group-table th.col-action    { width: 96px; }
+  .group-table th.col-net       { width: 6ch; text-align: right; }
+  .group-table th.col-strength  { width: auto; }
+
+  /* Keep cells from wrapping into each other */
+  .group-table td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Make consensus pill compact on mobile */
+  .pill { max-width: 15ch; overflow: hidden; text-overflow: ellipsis; }
+  .pill .hide-mobile { display: none !important; }
+  .pill .show-mobile { display: inline !important; }
+
+  /* Make “Add Bet” a little smaller so it doesn't crash into Net */
+  .group-table .btn { padding: 4px 8px; font-size: 12px; }
+
+  /* Strength bar should always take remaining column width */
+  .strength-track { width: 100% !important; }
+}
+
+/* Ensure strength bar really uses the full column width and never overlaps */
+.strength { width: 100%; }
+.strength-track { width: 100%; height: 14px; border-radius: 999px; background: #1f2430; overflow: hidden; }
+.strength-fill { height: 100%; transition: width 240ms ease; }
+/* --- Header label toggles --- */
+.show-mobile { display: none; }
+.hide-mobile { display: inline; }
+
+@media (max-width: 860px) {
+  .show-mobile { display: inline; }
+  .hide-mobile { display: none; }
+}
+/* Kill the bottom preview/inspector row on Group (whatever its id/class) */
+#consensus-preview,
+#matchup-preview,
+.inline-preview,
+.preview-row,
+.sticky-inspector {
+  display: none !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+/* Group table column sizing */
+.col-matchup   { min-width: 320px; }          /* was too tight for long names */
+.col-pick      { width: 210px; max-width: 230px; }
+.col-add       { width: 90px; }
+.col-net       { width: 64px; text-align: right; }
+.col-strength  { min-width: 220px; }          /* keep your perfect bar */
+@media (max-width: 860px) {
+  .col-matchup  { min-width: 240px; }
+  .col-pick     { width: 120px; max-width: 140px; } /* just enough for 3‑letter abbr */
+  .col-net      { width: 56px; }
+  .col-strength { min-width: 180px; }
+}
+/* Kill the Group sticky preview block everywhere */
+#stickyPreview, #consensusPreview, #matchupPreview,
+.sticky-preview, .group-preview, .preview, .preview-bar { 
+  display: none !important; 
+  height: 0 !important; 
+  padding: 0 !important; 
+  margin: 0 !important; 
+  border: 0 !important; 
+}
+/* Brand logo */
+.brand-logo {
+  height: 30px;       /* adjust size if needed */
+  display: block;
+}
+/* --- Normalize header/nav layout across all pages --- */
+header { text-align: initial; } /* stomp any accidental centering */
+
+.nav {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;      /* never center */
+  gap: 16px;
+  padding: 14px 16px;
+  flex-wrap: nowrap;                /* prevent line breaks */
+}
+
+.brand { 
+  display: flex; 
+  align-items: center; 
+  flex: 0 0 auto;                   /* don't grow/shrink */
+}
+
+.brand-logo {
+  height: 34px;                     /* tweak if you want bigger/smaller */
+  width: auto;
+  display: block;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 0 0 auto;                   /* fixed width; avoids push-around */
+}
+
+.nav .spacer { 
+  flex: 1 1 auto;                   /* pushes badge to far right */
+}
+
+/* Mobile tighten */
+@media (max-width: 520px) {
+  .brand-logo { height: 28px; }
+  .nav { gap: 12px; padding: 12px 12px; }
+  .nav-links { gap: 12px; }
+}
+/* ===== Standings: mobile readability ===== */
+
+/* Smooth horizontal scroll for mobile */
+.scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Keep header text intact; allow data cells to be non-wrapping by default */
+#leaderboard th,
+#weekly-grid th {
+  white-space: nowrap;
+}
+#leaderboard td,
+#weekly-grid td {
+  white-space: nowrap;
+}
+
+/* Give the tables a sensible minimum width so columns don't collapse */
+.minw-leader { min-width: 400px; }   /* leaderboard */
+.minw-weekly { min-width: 470px; }   /* weekly grid */
+
+/* Tight, legible column widths on small screens */
+@media (max-width: 780px) {
+  /* Leaderboard column sizing */
+  #leaderboard th:nth-child(1),
+  #leaderboard td:nth-child(1) { width: 30px; text-align:center; }   /* Rank */
+  #leaderboard th:nth-child(2),
+  #leaderboard td:nth-child(2) { width: 50px; }                    /* User */
+  #leaderboard th:nth-child(3),
+  #leaderboard td:nth-child(3) { width: 70x; }                     /* Points */
+  #leaderboard th:nth-child(4),
+  #leaderboard td:nth-child(4) { width: 90px; }                     /* Weekly Avg */
+  #leaderboard th:nth-child(5),
+  #leaderboard td:nth-child(5) { width: 60px; }                     /* W‑L‑P */
+  #leaderboard th:nth-child(6),
+  #leaderboard td:nth-child(6) { width: 60px; }                     /* Win % */
+
+  /* Weekly grid: make columns compact; header row is tall so prevent wrap */
+  #weekly-grid th { white-space: nowrap; }
+  /* Week label column a bit wider so 'Season Total'/'Weekly Average' fit */
+  #weekly-grid th:nth-child(1),
+  #weekly-grid td:nth-child(1) { width: 80px; }
+
+  /* Player columns—keep them narrow and consistent */
+  #weekly-grid th:nth-child(2),
+#weekly-grid th:nth-child(2) { width: 80px; text-align:center; } /* Andrew */
+  #weekly-grid th:nth-child(3),  
+#weekly-grid th:nth-child(3) { width: 60px; text-align:center; } /* Clay */
+  #weekly-grid th:nth-child(4),  
+#weekly-grid th:nth-child(4) { width: 60px; text-align:center; } /* Seth */
+  #weekly-grid th:nth-child(5),  
+#weekly-grid th:nth-child(5) { width: 74px; text-align:center; } /* Travis */
+  #weekly-grid th:nth-child(6),  
+#weekly-grid th:nth-child(6) { width: 60px; text-align:center; } /* Tyler */
+  #weekly-grid th:nth-child(7),  
+#weekly-grid th:nth-child(7) { width: 60px; text-align:center; } /* Will */
+}
+
+/* If a parent adds overflow hidden, ensure sticky header doesn't clip */
+.rank-head { overflow: visible; }
+@media (max-width: 920px), (hover: none) and (pointer: coarse) {
+  #ledger td:nth-child(4) .input { display: none; }              /* hide the text input */
+  #ledger td:nth-child(4) .side-mobile-abbr { display: inline; } /* show ABBR */
+/* Center the Side header text */
+#ledger th:nth-child(4) {
+  text-align: center;
+#ledger td:nth-child(4) {
+  text-align: center;
+}
+
+}
+
+}
+@media (min-width: 921px) {
+  #ledger td:nth-child(4) .side-mobile-abbr { display: none; }
+}
+
+@media (min-width: 921px) {
+  #ledger th:nth-child(1) , #ledger td:nth-child(1) { width: 80px; } /* Placed */
+  #ledger th:nth-child(2) , #ledger td:nth-child(2) { width: 80px; text-align:center;  } /* Week */  
+  #ledger th:nth-child(3) , #ledger td:nth-child(3) { width: 80px; } /* Type */
+  #ledger th:nth-child(4) , #ledger td:nth-child(4) { width: 480px; } /* Description */
+  #ledger th:nth-child(5) , #ledger td:nth-child(5) { width: 120px; }  /* Odds */
+  #ledger th:nth-child(6) , #ledger td:nth-child(6) { width: 120px; text-align:center; } /* Stake */
+  #ledger th:nth-child(7) , #ledger td:nth-child(7) { width: 80px; text-align:center; } /* Status */
+  #ledger th:nth-child(8) , #ledger td:nth-child(8) { width: 80px; } /* Payout */
+  #ledger th:nth-child(9) , #ledger td:nth-child(9) { width: 80px; }  /* Delete */
+}
+
+/* BB:CSS:GROUP:DESKTOP_COLUMNS */
+@media (min-width: 921px) {
+  /* Make column widths take effect */
+  #group-table { table-layout: fixed; width: 100%; }
+  #group-table th:nth-child(1), #group-table td:nth-child(1) { width: 400px; } /* Matchup */
+  #group-table th:nth-child(2), #group-table td:nth-child(2) { width: 220px; } /* Consensus Pick */
+  #group-table th:nth-child(3), #group-table td:nth-child(3) { width: 88px; text-align: center; } /* Add Bet */
+  #group-table th:nth-child(4), #group-table td:nth-child(3) { width: 34px; text-align: center; } /* Net */
+  #group-table th:nth-child(5), #group-table td:nth-child(2) { width: 210px; } /* Strength Bar */
+}
+/* Optional: ensure long names/pills don’t blow columns */
+@media (min-width: 921px) {
+  #group-table td { overflow: hidden; }
+}
+
+/* BB:CSS:PICKS:MOBILE_TIGHTEN */
+@media (max-width: 800px), (hover: none) and (pointer: coarse) {
+  /* Make column sizing predictable */
+  #picks-table { table-layout: fixed; width: 100%; }
+
+  /* Slightly denser */
+  #picks-table th, #picks-table td { padding: 6px 6px; font-size: 13px; }
+
+  /* Column widths (adjust to taste) */
+  #picks-table th:nth-child(1), #picks-table td:nth-child(1) { width: 36%; } /* Matchup */
+  #picks-table th:nth-child(2), #picks-table td:nth-child(2) { width: 22%; } /* Spread */
+  #picks-table th:nth-child(3), #picks-table td:nth-child(3) { width: 20%; } /* Your Pick */
+  #picks-table th:nth-child(4), #picks-table td:nth-child(4) { width: 22%; } /* Confidence */
+
+  /* Center "Confidence" header and values */
+  #picks-table th:nth-child(3),
+  #picks-table td:nth-child(3) { text-align: center; }
+  #picks-table th:nth-child(4),
+  #picks-table td:nth-child(4) { text-align: center; }
+
+  /* Center the number inside the <select> */
+  #picks-table td:nth-child(4) select.conf {
+    width: 100%;
+    text-align-last: center;  /* Chrome/Edge/Firefox */
+  }
+
+  /* Make the team <select> tighter on mobile */
+  #picks-table td:nth-child(3) .team-select {
+    width: 100%;
+  }
+
+  /* Tighten matchup cell a bit */
+  .matchup-grid { column-gap: 6px; }
+  .matchup-away, .matchup-home { gap: 6px; }
+  .matchup-away .team-name, .matchup-home .team-name {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+}
+/* BB:CSS:PICKS:DESKTOP_COLUMNS */
+@media (min-width: 921px) {
+  #picks-table { table-layout: fixed; width: 100%; }
+
+  /* Tune these numbers as you like */
+  #picks-table th:nth-child(1), #picks-table td:nth-child(1) { width: 46%; } /* Matchup */
+  #picks-table th:nth-child(2), #picks-table td:nth-child(2) { width: 14%; } /* Spread */
+  #picks-table th:nth-child(3), #picks-table td:nth-child(3) { width: 20%; } /* Your Pick */
+  #picks-table th:nth-child(4), #picks-table td:nth-child(4) { width: 20%; text-align:center; } /* Confidence */
+  #picks-table td:nth-child(4) select.conf { text-align-last: center; }
+}
+/* BB:CSS:PICKS:ADMIN_HOVERS_AND_FREEZE_CELL */
+@media (min-width: 921px) {
+  /* Weekly admin buttons: subtle hover */
+  #btn-set-current-week.admin:hover,
+  #btn-freeze-week.admin:hover,
+  #btn-lock.admin:hover,
+  #btn-unlock.admin:hover {
+    filter: brightness(1.1);
+    border-color: #38bdf8;              /* cyan-ish edge on hover */
+  }
+}
+
+/* Spread cell behaves like a button for admin */
+#picks-table td.cell-freezable {
+  cursor: pointer;
+}
+#picks-table td.cell-freezable:hover {
+  background: rgba(56,189,248,0.10);    /* light ice hover */
+}
+/* BB:CSS:PICKS:FROZEN_PILL */
+.badge.frozen {
+  background-color: rgba(56,189,248,0.25); /* lighter ice blue */
+  border: 1px solid rgba(56,189,248,0.4);
+}
+
+/* BB:CSS:STATUS_COLORS */
+.pill-won, .badge-won  { background-color: rgba(16,185,129,0.20); border: 1px solid rgba(16,185,129,0.35); }  /* green */
+.pill-push, .badge-push{ background-color: rgba(234,179,8,0.25);  border: 1px solid rgba(234,179,8,0.40);  }  /* yellow */
+.pill-lost, .badge-lost{ background-color: rgba(239,68,68,0.20);  border: 1px solid rgba(239,68,68,0.35); }  /* red */
+
+/* optional: keep text readable */
+.pill-won, .badge-won,
+.pill-push, .badge-push,
+.pill-lost, .badge-lost { color: #e5e7eb; }
+
+/* BB:CSS:PICK_SELECT_STATUS */
+.pick-select.status-won  { background-color: rgba(16,185,129,0.20) !important; border: 1px solid rgba(16,185,129,0.35) !important; color: #e5e7eb !important; }
+.pick-select.status-push { background-color: rgba(234,179,8,0.25)  !important; border: 1px solid rgba(234,179,8,0.40)  !important; color: #e5e7eb !important; }
+.pick-select.status-lost { background-color: rgba(239,68,68,0.20) !important; border: 1px solid rgba(239,68,68,0.35) !important; color: #e5e7eb !important; }
+/* BB:CSS:BANKROLL_STATUS_SELECT_TINT */
+.select.status-won  { background-color: rgba(16,185,129,0.20) !important; border: 1px solid rgba(16,185,129,0.35) !important; color: #e5e7eb !important; }
+.select.status-push { background-color: rgba(234,179,8,0.25)  !important; border: 1px solid rgba(234,179,8,0.40)  !important; color: #e5e7eb !important; }
+.select.status-lost { background-color: rgba(239,68,68,0.20) !important; border: 1px solid rgba(239,68,68,0.35) !important; color: #e5e7eb !important; }
+/* BB:CSS:PICKS:DUPLICATE_CONFIDENCE */
+.select.conf.duplicate {
+  /* keep native dark select styling */
+  background-color: #0e141d !important;
+  color: var(--text) !important;
+  /* draw attention with border + subtle inner glow */
+  border: 1px solid #eab308 !important;
+  box-shadow: 0 0 0 2px rgba(234,179,8,0.25) inset;
+}
+.select.conf.duplicate:focus {
+  /* a bit stronger cue on focus */
+  box-shadow:
+    0 0 0 2px rgba(234,179,8,0.45) inset,
+    0 0 0 3px rgba(234,179,8,0.20);
+}
+
+/* Warning bar stays as-is */
+#dupWarning {
+  background: #3b3a1a;
+  border: 1px solid #eab308;
+  color: #fde68a;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  margin-top: 8px;
+  display: none;
+}
+/* BB:CSS:PICKS:KICKOFF_TAG */
+.kickoff-tag {
+  font-size: 12px;
+  line-height: 1.2;
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+

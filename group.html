@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Group · NFL Picks</title>
+
+  <link rel="stylesheet" href="assets/styles.css"/>
+
+  <!-- Order matters -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+  <script src="assets/config.js"></script>
+  <script src="assets/supabase.js"></script>
+  <script src="assets/common.js"></script>
+
+  <!-- Ensure mobile/desktop header text never shows together -->
+  <style>
+    .show-mobile { display: none; }
+    .is-mobile .show-mobile { display: inline; }
+    .is-mobile .hide-mobile { display: none; }
+  </style>
+
+  <script>
+    // Mobile mode = based on width only (orientation doesn't matter)
+    const MOBILE_BP = 820;
+    function setMobileClass() {
+      const isMobile = window.matchMedia(`(max-width:${MOBILE_BP}px)`).matches;
+      document.body.classList.toggle('is-mobile', isMobile);
+    }
+    window.addEventListener('resize', setMobileClass);
+    window.addEventListener('orientationchange', setMobileClass);
+    document.addEventListener('DOMContentLoaded', setMobileClass);
+  </script>
+</head>
+
+<body>
+<header>
+  <div class="nav">
+    <div class="brand">
+      <img src="assets/BB1_clean_transparent_optimized.png" alt="Betting Buddies" class="brand-logo">
+    </div>
+
+    <nav class="nav-links">
+      <a href="picks.html">Picks</a>
+      <a href="group.html">Group</a>
+      <a href="standings.html">Standings</a>
+      <a href="bankroll.html">Bankroll</a>
+    </nav>
+
+    <div class="spacer"></div>
+    <span class="badge">Season 2025</span>
+  </div>
+</header>
+
+<main>
+  <div class="card">
+    <div class="toolbar">
+      <div>
+        <label>Week:
+          <select id="week-select" class="select"></select>
+        </label>
+      </div>
+      <div class="spacer"></div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="muted">Picks are in:</span>
+        <div id="user-status" class="user-status"></div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table id="group-table" class="table group-table">
+        <thead>
+          <tr>
+            <th class="col-matchup">Matchup</th>
+            <th class="col-pick">
+              <!-- BB:GROUP:MOBILE_HEADERS_START -->
+              <span class="hide-mobile">Consensus Pick</span>
+              <span class="show-mobile">Pick</span>
+            </th>
+            <th class="col-add"></th>
+            <th class="col-net">Net</th>
+            <th class="col-strength">
+              <span class="hide-mobile">Strength (max 96)</span>
+              <span class="show-mobile">Strength</span>
+              <!-- BB:GROUP:MOBILE_HEADERS_END -->
+            </th>
+          </tr>
+        </thead>
+        <tbody id="group-body"></tbody>
+      </table>
+    </div>
+
+    <div id="empty-state" class="muted" style="display:none; padding:12px;">
+      No picks submitted yet for this week.
+    </div>
+  </div>
+</main>
+
+<!-- User Picks Modal -->
+<div id="userPicksModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000;">
+  <div style="max-width:720px; max-height:80vh; overflow-y:auto; margin:80px auto; background:#111; color:#eee; border-radius:10px; padding:16px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+      <h3 id="userPicksTitle" style="margin:0;">Picks</h3>
+      <button id="closeUserPicksBtn" class="btn">Close</button>
+    </div>
+    <table class="subtable">
+      <thead>
+        <tr>
+          <th style="width:48%;">Matchup</th>
+          <th style="width:26%;">Team</th>
+          <th style="width:26%;">Confidence</th>
+        </tr>
+      </thead>
+      <tbody id="userPicksTbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="toast"></div>
+
+<script>
+  let CURRENT_WEEK = 1;
+  const USERS = ['Andrew','Clay','Seth','Travis','Tyler','Will'];
+  let consensusRows = [];
+  let maxNet = 1;
+
+  // ---- helpers ----
+  function toAbbr(team) {
+    const t = String(team || '').replace(/\s+/g, ' ').trim();
+    const map = (window.TEAM_LOGOS || {});
+    if (map[t]) return map[t];
+
+    const special = {
+      'Los Angeles Chargers':'LAC','Los Angeles Rams':'LAR',
+      'New York Giants':'NYG','New York Jets':'NYJ',
+      'Las Vegas Raiders':'LVR','Washington Commanders':'WAS',
+      'Green Bay Packers':'GB','San Francisco 49ers':'SF',
+      'Tampa Bay Buccaneers':'TB','New England Patriots':'NE',
+      'New Orleans Saints':'NO','Kansas City Chiefs':'KC',
+      'Jacksonville Jaguars':'JAX','Detroit Lions':'DET',
+      'Cleveland Browns':'CLE','Cincinnati Bengals':'CIN',
+      'Dallas Cowboys':'DAL','Miami Dolphins':'MIA',
+      'Tennessee Titans':'TEN','Arizona Cardinals':'ARI',
+      'Seattle Seahawks':'SEA','Houston Texans':'HOU',
+      'Indianapolis Colts':'IND','Carolina Panthers':'CAR',
+      'Philadelphia Eagles':'PHI','Pittsburgh Steelers':'PIT',
+      'Atlanta Falcons':'ATL','Buffalo Bills':'BUF',
+      'Chicago Bears':'CHI','Denver Broncos':'DEN',
+      'Minnesota Vikings':'MIN','Baltimore Ravens':'BAL',
+      'Jacksonville Jaguars':'JAX','Las Vegas Raiders':'LVR'
+    };
+    if (special[t]) return special[t];
+
+    return t.split(' ').map(w => w[0]).join('').slice(0,3).toUpperCase();
+  }
+
+  function makeMatchupCell(awayName, homeName) {
+    const container = document.createElement('div');
+    container.className = 'row-team matchup-grid';
+
+    const awayDiv = document.createElement('div');
+    awayDiv.className = 'matchup-away';
+    const awayText = document.createElement('span');
+    awayText.className = 'hide-mobile';
+    awayText.textContent = awayName + ' ';
+    awayDiv.appendChild(awayText);
+    awayDiv.appendChild(makeTeamLogoOnly(awayName));
+
+    const at = document.createElement('div');
+    at.textContent = '@';
+    at.style.textAlign = 'center';
+
+    const homeDiv = document.createElement('div');
+    homeDiv.className = 'matchup-home';
+    homeDiv.appendChild(makeTeamLogoOnly(homeName));
+    const homeText = document.createElement('span');
+    homeText.className = 'hide-mobile';
+    homeText.textContent = ' ' + homeName;
+    homeDiv.appendChild(homeText);
+
+    container.appendChild(awayDiv);
+    container.appendChild(at);
+    container.appendChild(homeDiv);
+    return container;
+  }
+
+  /* BB:GROUP:CONSENSUS_ABBR_START */
+  function consensusPill(team) {
+    const div = document.createElement('div');
+    div.className = 'pill';
+    if (!team) { div.textContent = ''; return div; }
+    if (team === 'TIE') { div.textContent = 'TIE'; return div; }
+
+    const img = makeTeamLogoOnly(team);
+    if (img) {
+      img.style.width = '18px';
+      img.style.height = '18px';
+      img.style.marginRight = '6px';
+      img.style.borderRadius = '50%';
+      div.appendChild(img);
+    }
+
+    const full = document.createElement('span');
+    full.className = 'hide-mobile';
+    full.textContent = team;
+
+    const abbr = document.createElement('span');
+    abbr.className = 'show-mobile';
+    abbr.textContent = toAbbr(team);
+
+    div.appendChild(full);
+    div.appendChild(abbr);
+    return div;
+  }
+  /* BB:GROUP:CONSENSUS_ABBR_END */
+
+  function strengthBar(net, fixedMax = 96) {
+    const wrap = document.createElement('div');
+    wrap.className = 'strength';
+    const track = document.createElement('div');
+    track.className = 'strength-track';
+    const fill = document.createElement('div');
+    fill.className = 'strength-fill';
+
+    const pct = Math.max(0, Math.min(100, Math.round((net / fixedMax) * 100)));
+    fill.style.width = pct + '%';
+
+    if (net >= 50) fill.style.background = '#22c55e';
+    else if (net >= 30) fill.style.background = '#eab308';
+    else fill.style.background = '#ef4444';
+
+    track.appendChild(fill);
+    wrap.appendChild(track);
+    return wrap;
+  }
+
+  async function toggleRowDetail(tr, gameId) {
+    const next = tr.nextElementSibling;
+    if (next && next.classList.contains('detail-row')) { next.remove(); return; }
+
+    const picks = await sbLoadGamePicks(CURRENT_WEEK, gameId);
+    const detailTr = document.createElement('tr');
+    detailTr.className = 'detail-row';
+    const td = document.createElement('td');
+    td.colSpan = 5;
+
+    if (!picks.length) {
+      td.innerHTML = '<div class="muted">No picks yet.</div>';
+    } else {
+      const tbl = document.createElement('table');
+      tbl.className = 'subtable';
+      tbl.innerHTML = `
+        <thead><tr><th>User</th><th>Team</th><th>Confidence</th></tr></thead>
+        <tbody></tbody>
+      `;
+      const body = tbl.querySelector('tbody');
+      picks.forEach(p => {
+        const r = document.createElement('tr');
+        r.innerHTML = `<td>${p.username}</td><td>${p.team}</td><td style="text-align:center">${p.confidence ?? ''}</td>`;
+        body.appendChild(r);
+      });
+      td.appendChild(tbl);
+    }
+    detailTr.appendChild(td);
+    tr.after(detailTr);
+  }
+
+  async function render() {
+    const body = document.getElementById('group-body');
+    body.innerHTML = '';
+
+    const rows = await sbLoadConsensus(CURRENT_WEEK);
+    if (!rows.length) {
+      document.getElementById('empty-state').style.display = 'block';
+      return;
+    }
+    document.getElementById('empty-state').style.display = 'none';
+
+    rows.forEach(r => {
+      const homeStr = Number(r.homeSum || 0);
+      const awayStr = Number(r.awaySum || 0);
+      if (homeStr > awayStr) { r.winner = r.home; r.net = homeStr - awayStr; }
+      else if (awayStr > homeStr) { r.winner = r.away; r.net = awayStr - homeStr; }
+      else { r.winner = ''; r.net = 0; }
+    });
+
+    rows.sort((a, b) => b.net - a.net);
+    maxNet = Math.max(...rows.map(r => r.net), 1);
+
+    rows.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.dataset.home    = r.home || '';
+      tr.dataset.away    = r.away || '';
+      tr.dataset.spread  = (r.spread ?? '');
+      tr.dataset.winner  = r.winner || '';
+      tr.dataset.homesum = String(r.homeSum ?? '');
+      tr.dataset.awaysum = String(r.awaySum ?? '');
+      tr.setAttribute('data-game-id', r.id);
+
+      const tdM = document.createElement('td');
+      tdM.appendChild(makeMatchupCell(r.away, r.home));
+
+      const tdW = document.createElement('td');
+      const pillEl = consensusPill(r.winner);
+      pillEl.classList.add('clickable-pill');
+      pillEl.title = 'Click for game details';
+      pillEl.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        toggleRowDetail(tr, r.id);
+      });
+      tdW.appendChild(pillEl);
+
+      // tinting (final or provisional)
+      pillEl.classList.remove('pill-won','pill-push','pill-lost');
+      if (r.final === true && r.winner_ats) {
+        const won  = (r.winner && r.winner.toLowerCase() === r.home.toLowerCase() && r.winner_ats === 'HOME')
+                  || (r.winner && r.winner.toLowerCase() === r.away.toLowerCase() && r.winner_ats === 'AWAY');
+        const push = (r.winner_ats === 'PUSH');
+        if (push) pillEl.classList.add('pill-push');
+        else pillEl.classList.add(won ? 'pill-won' : 'pill-lost');
+      } else if (r.home_score != null && r.away_score != null) {
+        const line = Number((r.spread_frozen ?? r.spread));
+        const hs   = Number(r.home_score);
+        const as   = Number(r.away_score);
+        if (Number.isFinite(line) && Number.isFinite(hs) && Number.isFinite(as)) {
+          const adjHome = hs + line;
+          let leader = 'PUSH';
+          if (adjHome > as) leader = 'HOME';
+          else if (adjHome < as) leader = 'AWAY';
+
+          if (leader === 'PUSH') {
+            pillEl.classList.add('pill-push');
+          } else {
+            const consensusIsHome = r.winner && r.winner.toLowerCase() === r.home.toLowerCase();
+            const consensusSide   = consensusIsHome ? 'HOME'
+                                  : (r.winner && r.winner.toLowerCase() === r.away.toLowerCase() ? 'AWAY' : 'UNKNOWN');
+            if (consensusSide !== 'UNKNOWN') {
+              pillEl.classList.add(consensusSide === leader ? 'pill-won' : 'pill-lost');
+            }
+          }
+        }
+      }
+
+      const tdAB = document.createElement('td');
+      const addBtn = document.createElement('button');
+      addBtn.type = 'button';
+      addBtn.textContent = '💸Add Bet';
+      addBtn.className = 'btn tiny';
+      addBtn.onclick = (ev) => {
+        const trEl = ev.currentTarget.closest('tr');
+        if (!trEl) return;
+
+        const home    = trEl.dataset.home || '';
+        const away    = trEl.dataset.away || '';
+        const spread  = trEl.dataset.spread;
+        const winner  = trEl.dataset.winner;
+        const homeSum = Number(trEl.dataset.homesum);
+        const awaySum = Number(trEl.dataset.awaysum);
+
+        let chosenTeam = home;
+        if (Number.isFinite(homeSum) && Number.isFinite(awaySum) && homeSum !== awaySum) {
+          chosenTeam = (homeSum > awaySum) ? home : away;
+        } else if (winner) {
+          chosenTeam = winner;
+        }
+
+        const sNum = Number(spread);
+        const spreadLabel = Number.isFinite(sNum) ? (sNum > 0 ? '+' + sNum : String(sNum)) : '';
+        const desc = `${chosenTeam} ${spreadLabel}`;
+        window.location.href =
+          `bankroll.html?type=ATS&week=${CURRENT_WEEK}&desc=${encodeURIComponent(desc)}&odds=-110#add`;
+      };
+      tdAB.appendChild(addBtn);
+
+      const tdN = document.createElement('td');
+      tdN.textContent = r.net;
+
+      const tdS = document.createElement('td');
+      tdS.appendChild(strengthBar(r.net, 96));
+
+      tr.appendChild(tdM);
+      tr.appendChild(tdW);
+      tr.appendChild(tdAB);
+      tr.appendChild(tdN);
+      tr.appendChild(tdS);
+
+      tr.style.cursor = 'pointer';
+      tr.addEventListener('click', () => toggleRowDetail(tr, r.id));
+      body.appendChild(tr);
+    });
+  }
+
+  function closeUserPicksModal() {
+    document.getElementById('userPicksModal').style.display = 'none';
+  }
+  document.getElementById('closeUserPicksBtn').onclick = closeUserPicksModal;
+
+  async function openUserPicksModal(username) {
+    const modal = document.getElementById('userPicksModal');
+    const title = document.getElementById('userPicksTitle');
+    const tbody = document.getElementById('userPicksTbody');
+
+    title.textContent = `Picks for ${username} — Week ${CURRENT_WEEK}`;
+    tbody.innerHTML = `<tr><td colspan="3" class="muted">Loading…</td></tr>`;
+    modal.style.display = 'block';
+
+    try {
+      const [userPicks, games] = await Promise.all([
+        sbLoadUsersWeekPicks(CURRENT_WEEK, [username]),
+        sbLoadGames(CURRENT_WEEK)
+      ]);
+      const gmap = new Map(games.map(g => [g.id, `${g.away} @ ${g.home}`]));
+      userPicks.sort((a,b)=>Number(b.confidence)-Number(a.confidence));
+
+      if (!userPicks.length) {
+        tbody.innerHTML = `<tr><td colspan="3" class="muted">${username} has no picks for Week ${CURRENT_WEEK}.</td></tr>`;
+      } else {
+        tbody.innerHTML = '';
+        userPicks.forEach(p => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${gmap.get(p.game_id) || `Game #${p.game_id}`}</td>
+            <td>${p.team || ''}</td>
+            <td style="text-align:center">${p.confidence ?? ''}</td>`;
+          tbody.appendChild(tr);
+        });
+      }
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="3" class="muted">Failed to load picks: ${String(e)}</td></tr>`;
+    }
+  }
+
+  async function updateUserStatus() {
+    const container = document.getElementById('user-status');
+    if (!container) return;
+    container.innerHTML = '…';
+
+    try {
+      const games = await sbLoadGames(CURRENT_WEEK);
+      const gameIds = games.map(g => g.id);
+      const gamesCount = gameIds.length;
+      const allowed = Array.from({length: gamesCount}, (_,i)=>16-i);
+      const all = await sbLoadUsersWeekPicks(CURRENT_WEEK, USERS);
+
+      const byUser = new Map(USERS.map(u=>[u,[]]));
+      all.forEach(r => { if (byUser.has(r.username)) byUser.get(r.username).push(r); });
+
+      function compute(picks) {
+        const filtered = picks.filter(p => gameIds.includes(p.game_id));
+        const started = filtered.some(p => p.team || p.confidence != null);
+        if (filtered.length < gamesCount) return {started, complete:false, done:0};
+
+        const byGame = new Map(); filtered.forEach(p => byGame.set(p.game_id,p));
+        if (byGame.size !== gamesCount) return {started, complete:false, done:0};
+
+        const confs = []; let done=0;
+        for (const id of gameIds) {
+          const p = byGame.get(id);
+          const hasTeam = !!p?.team;
+          const hasConf = p?.confidence != null && p.confidence !== '';
+          if (hasTeam && hasConf) {
+            done++;
+            const n = Number(p.confidence);
+            if (!Number.isFinite(n)) return {started, complete:false, done};
+            confs.push(n);
+          }
+        }
+        if (done !== gamesCount) return {started, complete:false, done};
+        const uniq = new Set(confs);
+        if (uniq.size !== gamesCount) return {started, complete:false, done};
+        for (const c of confs) if (!allowed.includes(c)) return {started, complete:false, done};
+        return {started, complete:true, done};
+      }
+
+      container.innerHTML = '';
+      USERS.forEach(u => {
+        const {started, complete, done} = compute(byUser.get(u) || []);
+        const chip = document.createElement('div');
+        chip.className = 'user-chip ' + (complete ? 'ok' : (started ? 'partial' : 'miss'));
+        chip.textContent = u;
+        chip.title = complete ? 'All picks complete' : (started ? `${done}/${gamesCount} complete` : 'No picks yet');
+        chip.style.cursor = 'pointer';
+        chip.addEventListener('click', () => openUserPicksModal(u));
+        container.appendChild(chip);
+      });
+    } catch (e) {
+      console.error('updateUserStatus failed:', e);
+      container.innerHTML = '';
+      USERS.forEach(u => {
+        const chip = document.createElement('div');
+        chip.className = 'user-chip miss';
+        chip.textContent = u;
+        container.appendChild(chip);
+      });
+    }
+  }
+
+  async function init() {
+    // Populate week dropdown
+    const weeks = await sbLoadWeeks();
+    const sel = document.getElementById('week-select');
+    sel.innerHTML = '';
+    weeks.forEach(w => {
+      const o = document.createElement('option');
+      o.value = w.week;
+      o.textContent = 'Week ' + w.week;
+      sel.appendChild(o);
+    });
+
+    // Read season default, fallback to first
+    const defaultWeek = await sbGetCurrentWeek();
+    CURRENT_WEEK = (Number.isFinite(defaultWeek) && weeks.some(w => w.week === defaultWeek))
+      ? defaultWeek
+      : (weeks[0]?.week || 1);
+    sel.value = CURRENT_WEEK;
+
+    sel.onchange = async () => {
+      CURRENT_WEEK = Number(sel.value);
+      await render();
+      await updateUserStatus();
+    };
+
+    await render();
+    await updateUserStatus();
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

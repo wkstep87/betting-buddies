@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Standings · NFL Picks</title>
+
+  <link rel="stylesheet" href="assets/styles.css"/>
+
+  <!-- Order matters -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+  <script src="assets/config.js"></script>
+  <script src="assets/supabase.js"></script>
+  <script src="assets/common.js"></script>
+</head>
+<body>
+<header>
+  <div class="nav">
+    <div class="brand">
+      <img src="assets/BB1_clean_transparent_optimized.png" alt="Betting Buddies" class="brand-logo">
+    </div>
+
+    <nav class="nav-links">
+      <a href="picks.html">Picks</a>
+      <a href="group.html">Group</a>
+      <a href="standings.html">Standings</a>
+      <a href="bankroll.html">Bankroll</a>
+    </nav>
+
+    <div class="spacer"></div>
+    <span class="badge">Season 2025</span>
+  </div>
+</header>
+
+<main>
+  <div class="card">
+    <div class="toolbar">
+      <div>
+        <label>Scope:
+          <select id="scope-select" class="select">
+            <option value="season">Season to‑date</option>
+          </select>
+        </label>
+      </div>
+      <div>
+        <label>View:
+          <select id="view-select" class="select">
+            <option value="points">By Points</option>
+            <option value="winpct">By Win %</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <!-- Leaderboard -->
+<h3 style="margin: 6px 0 10px;">Leaderboard</h3>
+<!-- BB:STANDINGS:TABLE_WRAPPER_START -->
+<div class="table-wrap scroll-x">
+  <table class="table minw-leader" id="leaderboard">
+    <thead>
+      <!-- BB:STANDINGS:HEADERS_START -->
+      <tr>
+        <th style="width:64px;">Rank</th>
+        <th>User</th>
+        <th id="col-metric-a">Points</th>
+        <th id="col-metric-b">Weekly Avg</th>
+        <th>W‑L‑P</th>
+        <th>Win %</th>
+            </tr>
+      <!-- BB:STANDINGS:HEADERS_END -->
+    </thead>
+    <tbody id="leaderboard-body"></tbody>
+  </table>
+</div>
+<!-- BB:STANDINGS:TABLE_WRAPPER_END -->
+</div>
+
+<!-- Weekly Grid -->
+<h3 style="margin: 18px 0 10px;">Weekly Results</h3>
+<!-- BB:STANDINGS:TABLE_WRAPPER_START -->
+<div class="table-wrap scroll-x">
+  <table class="table minw-weekly" id="weekly-grid">
+    <thead id="weekly-head"></thead>
+    <tbody id="weekly-body"></tbody>
+    <tfoot id="weekly-foot"></tfoot>
+  </table>
+</div>
+
+<div id="empty-standings" class="muted" style="display:none; padding:12px;">
+  No finalized games yet.
+</div>
+
+</main>
+
+<script>
+  const USERS = ['Andrew', 'Clay', 'Seth', 'Travis', 'Tyler', 'Will'];
+
+  // rank colors (1..6)
+  const RANK_COLORS = {
+    1: '#FACC15', // gold
+    2: '#D1D5DB', // silver
+    3: '#CD7F32', // bronze
+    4: '#60A5FA', // blue
+    5: '#7bbf72', // muted green
+    6: '#A78BFA'  // purple
+  };
+
+  let weeksList = []; // [1..18]
+  let finalizedWeeks = []; // computed from games
+  let perUser = {};   // computed from ATS scores cache
+
+  async function initScopeOptions() {
+    // Build scope select: "Season to‑date" + Week 1..18
+    const weeks = await sbLoadWeeks();
+    weeksList = weeks.map(w => w.week).sort((a,b)=>a-b);
+    const scopeSel = document.getElementById('scope-select');
+    weeksList.forEach(w => {
+      const o = document.createElement('option');
+      o.value = String(w);
+      o.textContent = 'Week ' + w;
+      scopeSel.appendChild(o);
+    });
+  }
+
+  function fmtPct(x) {
+    return (x * 100).toFixed(1) + '%';
+  }
+  function fmtWLP(u) {
+    return `${u.wins}-${u.losses}-${u.pushes}`;
+  }
+  function sortByView(rows, view) {
+    if (view === 'winpct') {
+      rows.sort((a,b) => {
+        if (b.u.winPct !== a.u.winPct) return b.u.winPct - a.u.winPct;
+        if (b.u.wins !== a.u.wins)     return b.u.wins   - a.u.wins;
+        if (b.u.points !== a.u.points) return b.u.points - a.u.points;
+        return a.name.localeCompare(b.name);
+      });
+    } else { // points
+      rows.sort((a,b) => {
+        if (b.u.points !== a.u.points)   return b.u.points - a.u.points;
+        if (b.u.weeklyAvg !== a.u.weeklyAvg) return b.u.weeklyAvg - a.u.weeklyAvg;
+        return a.name.localeCompare(b.name);
+      });
+    }
+  }
+
+  function renderLeaderboard(view) {
+    const body = document.getElementById('leaderboard-body');
+    body.innerHTML = '';
+
+    // Build sortable rows
+    const rows = USERS.map(name => ({ name, u: perUser[name] || {points:0,wins:0,losses:0,pushes:0,winPct:0,weeklyAvg:0} }));
+    sortByView(rows, view);
+
+    // update column labels depending on view
+    document.getElementById('col-metric-a').textContent = (view === 'winpct') ? 'Win %' : 'Points';
+    document.getElementById('col-metric-b').textContent = (view === 'winpct') ? 'Points' : 'Weekly Avg';
+
+    // render rows with rank colors
+    rows.forEach((row, i) => {
+      const rank = i + 1;
+      const tr = document.createElement('tr');
+      tr.className = 'rank-row';
+      tr.style.setProperty('--rank-color', RANK_COLORS[rank] || '#374151');
+
+      const tdR = document.createElement('td'); tdR.textContent = rank;
+      const tdN = document.createElement('td'); tdN.textContent = row.name;
+
+      const tdA = document.createElement('td');
+      const tdB = document.createElement('td');
+
+      if (view === 'winpct') {
+        tdA.textContent = fmtPct(row.u.winPct);
+        tdB.textContent = row.u.points;
+      } else {
+        tdA.textContent = row.u.points;
+        tdB.textContent = row.u.weeklyAvg.toFixed(1);
+      }
+
+      const tdWLP = document.createElement('td'); tdWLP.textContent = fmtWLP(row.u);
+      const tdPct = document.createElement('td');  tdPct.textContent = fmtPct(row.u.winPct);
+
+      tr.appendChild(tdR);
+      tr.appendChild(tdN);
+      tr.appendChild(tdA);
+      tr.appendChild(tdB);
+      tr.appendChild(tdWLP);
+      tr.appendChild(tdPct);
+      body.appendChild(tr);
+    });
+  }
+
+  function renderWeeklyGrid(view, scope) {
+    const thead = document.getElementById('weekly-head');
+    const tbody = document.getElementById('weekly-body');
+    const tfoot = document.getElementById('weekly-foot');
+    thead.innerHTML = '';
+    tbody.innerHTML = '';
+    tfoot.innerHTML = '';
+
+    // Header
+    const hr = document.createElement('tr');
+    const thWeek = document.createElement('th'); thWeek.textContent = 'Week';
+    hr.appendChild(thWeek);
+
+    // Determine rank order to color headers (season order by current view)
+    const rankRows = USERS.map(name => ({ name, u: perUser[name] || {} }));
+    sortByView(rankRows, view); // reuse same sorter
+    const rankIndex = new Map(rankRows.map((r, i) => [r.name, i + 1])); // 1..6
+
+    USERS.forEach(name => {
+      const th = document.createElement('th');
+      th.textContent = name;
+      const r = rankIndex.get(name) || 6;
+      th.className = 'rank-head';
+      th.style.setProperty('--rank-color', RANK_COLORS[r] || '#374151');
+      hr.appendChild(th);
+    });
+    thead.appendChild(hr);
+
+    // Body rows: if scope === 'season', show all finalized weeks, else if a week chosen, show just that week row
+    const showWeeks = (scope === 'season') ? finalizedWeeks : [Number(scope)].filter(w => finalizedWeeks.includes(w));
+
+    showWeeks.forEach(w => {
+      const tr = document.createElement('tr');
+      const tdW = document.createElement('td'); tdW.textContent = 'Week ' + w; tr.appendChild(tdW);
+      USERS.forEach(name => {
+        const td = document.createElement('td');
+        const pts = perUser[name]?.weekly?.get(w) ?? '';
+        td.textContent = (pts === 0 || typeof pts === 'number') ? String(pts) : '';
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+
+    // Footer (season totals & averages) only for season scope
+    if (scope === 'season') {
+      // Season Total
+      const fr1 = document.createElement('tr');
+      const ft1 = document.createElement('td'); ft1.textContent = 'Season Total'; fr1.appendChild(ft1);
+      USERS.forEach(name => {
+        const td = document.createElement('td');
+        td.textContent = (perUser[name]?.points ?? 0);
+        fr1.appendChild(td);
+      });
+      tfoot.appendChild(fr1);
+    }
+  }
+
+  async function renderStandings() {
+    const scopeSel = document.getElementById('scope-select');
+    const viewSel  = document.getElementById('view-select');
+    const scopeVal = scopeSel.value;  // 'season' or '1'..'18'
+    const viewVal  = viewSel.value;   // 'points' or 'winpct'
+
+    // Load data depending on scope
+    const week = (scopeVal === 'season') ? null : Number(scopeVal);
+
+    const games = await sbLoadCompletedGames(week);
+    const picks = await sbLoadAllPicks(week);
+
+    if (!games.length) {
+      document.getElementById('empty-standings').style.display = 'block';
+      document.getElementById('leaderboard').style.display = 'none';
+      document.getElementById('weekly-grid').style.display = 'none';
+      return;
+    }
+    document.getElementById('empty-standings').style.display = 'none';
+    document.getElementById('leaderboard').style.display = '';
+    document.getElementById('weekly-grid').style.display = '';
+
+    // Compute ATS
+    const { perUser: agg, finalizedWeeks: fWeeks } = computeAts(games, picks, USERS);
+    perUser = agg;
+    finalizedWeeks = fWeeks;
+
+    // Render
+    renderLeaderboard(viewVal);
+    renderWeeklyGrid(viewVal, scopeVal);
+  }
+
+  async function init() {
+    await initScopeOptions();
+    document.getElementById('scope-select').onchange = renderStandings;
+    document.getElementById('view-select').onchange  = renderStandings;
+    await renderStandings();
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

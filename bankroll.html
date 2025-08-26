@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Bankroll · NFL Picks</title>
+
+  <link rel="stylesheet" href="assets/styles.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+  <script src="assets/config.js"></script>
+  <script src="assets/supabase.js"></script>
+  <script src="assets/common.js"></script>
+
+  <style>
+  /* Treat phones (both orientations) as mobile */
+  @media (max-width: 920px), (hover: none) and (pointer: coarse) {
+    /* First, show ALL columns by default on mobile */
+    #ledger th, #ledger td { display: table-cell !important; }
+
+    /* Hide only Placed (1), Week (2), Type (3) */
+    #ledger th:nth-child(1), #ledger td:nth-child(1),
+    #ledger th:nth-child(2), #ledger td:nth-child(2),
+    #ledger th:nth-child(3), #ledger td:nth-child(3) {
+      display: none !important;
+    }
+
+    /* Explicitly force Side..Delete (4..9) to stay visible */
+    #ledger th:nth-child(4), #ledger td:nth-child(4),
+    #ledger th:nth-child(5), #ledger td:nth-child(5),
+    #ledger th:nth-child(6), #ledger td:nth-child(6),
+    #ledger th:nth-child(7), #ledger td:nth-child(7),
+    #ledger th:nth-child(8), #ledger td:nth-child(8),
+    #ledger th:nth-child(9), #ledger td:nth-child(9) {
+      display: table-cell !important;
+      vertical-align: middle;
+    }
+
+    /* Tighter widths on phones */
+    #ledger th:nth-child(4), #ledger td:nth-child(4) { min-width: 120px; } /* Side */
+    #ledger th:nth-child(5), #ledger td:nth-child(5) { width: 56px; }      /* Odds */
+    #ledger th:nth-child(6), #ledger td:nth-child(6) { width: 60px; }      /* Stake */
+    #ledger th:nth-child(7), #ledger td:nth-child(7) { width: 92px; }      /* Status */
+    #ledger th:nth-child(8), #ledger td:nth-child(8) { width: 56px; }      /* Payout */
+    #ledger th:nth-child(9), #ledger td:nth-child(9) { width: 56px; }      /* Delete */
+
+    #ledger th, #ledger td { padding: 6px 6px; font-size: 11px; }
+
+    #ledger { table-layout: fixed; }
+    /* Mobile: show ABBR span, hide the text input in Side column */
+    #ledger td:nth-child(4) .input { display: none; }
+    #ledger td:nth-child(4) .side-mobile-abbr { display: inline; }
+  }
+  /* Desktop: show the text input, hide ABBR span */
+  @media (min-width: 921px) {
+    #ledger td:nth-child(4) .side-mobile-abbr { display: none; }
+  }
+
+  /* Allow horizontal scroll if needed */
+  .table-wrap { overflow-x: auto; }
+  </style>
+
+  <script>
+  // ---------- globals ----------
+  let SETTINGS = { starting_bank: 3000, default_stake: 150 };
+  let WAGERS = [];
+  let LEDGER_RENDER_TICKET = 0;
+
+  // ---------- helpers ----------
+  const TEAM_ABRR_FALLBACK_FIX = {
+    "Arizona Cardinals":"ARI","Atlanta Falcons":"ATL","Baltimore Ravens":"BAL","Buffalo Bills":"BUF",
+    "Carolina Panthers":"CAR","Chicago Bears":"CHI","Cincinnati Bengals":"CIN","Cleveland Browns":"CLE",
+    "Dallas Cowboys":"DAL","Denver Broncos":"DEN","Detroit Lions":"DET","Green Bay Packers":"GB",
+    "Houston Texans":"HOU","Indianapolis Colts":"IND","Jacksonville Jaguars":"JAX","Kansas City Chiefs":"KC",
+    "Las Vegas Raiders":"LVR","Los Angeles Chargers":"LAC","Los Angeles Rams":"LAR","Miami Dolphins":"MIA",
+    "Minnesota Vikings":"MIN","New England Patriots":"NE","New Orleans Saints":"NO","New York Giants":"NYG",
+    "New York Jets":"NYJ","Philadelphia Eagles":"PHI","Pittsburgh Steelers":"PIT","San Francisco 49ers":"SF",
+    "Seattle Seahawks":"SEA","Tampa Bay Buccaneers":"TB","Tennessee Titans":"TEN","Washington Commanders":"WAS"
+  };
+  const TEAM_ABBR_FALLBACK = TEAM_ABRR_FALLBACK_FIX;
+
+  function teamAbbr(name){
+    const map = (window.TEAM_LOGOS || TEAM_ABBR_FALLBACK);
+    return map[name] || name;
+  }
+  function compactSideText(desc){
+    if (!desc) return '';
+    const m = desc.match(/([A-Z][A-Za-z .]+?)\s*([+-]?\d+(?:\.\d+)?)/);
+    if (m) return `${teamAbbr(m[1].trim())} ${m[2]}`;
+    const m2 = desc.match(/([A-Z][A-Za-z .]+)/);
+    return m2 ? teamAbbr(m2[1].trim()) : desc;
+  }
+  const _moneyFmt = new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  function fmtMoney(x){ return '$' + _moneyFmt.format(Number(x)||0); }
+  function parseCommaNumber(v){ return Number(String(v).replace(/,/g,''))||0; }
+  function formatWithCommas(v){
+    const n=Number(String(v).replace(/,/g,'')); return Number.isFinite(n)?n.toLocaleString('en-US',{maximumFractionDigits:0}):'';
+  }
+  function formatOdds(val){ const n=Number(val); if(!Number.isFinite(n))return String(val??''); return n>0?`+${n}`:String(n); }
+  function parseOdds(val){ if(!val)return null; const n=Number(String(val).trim().replace('+','')); return Number.isFinite(n)?n:null; }
+
+  // ---------- live/provisional helpers (for wagers tint) ----------
+  // BB:BANKROLL:LIVE_HELPERS_START
+  function parseAtsDesc(desc){
+    if (!desc) return null;
+    const m = String(desc).match(/^(.+?)\s+([+-]?\d+(?:\.\d+)?)\s*$/);
+    if (!m) return { team: String(desc).trim() }; // allow team-only
+    return { team: m[1].trim(), line: Number(m[2]) };
+  }
+  function matchTeamToSide(term, home, away){
+    const t = String(term||'').trim().toLowerCase();
+    const h = String(home||'').trim().toLowerCase();
+    const a = String(away||'').trim().toLowerCase();
+    if (!t) return 'UNKNOWN';
+    if (t === h || h.includes(t)) return 'HOME';
+    if (t === a || a.includes(t)) return 'AWAY';
+    return 'UNKNOWN';
+  }
+  function provisionalLeader(homeScore, awayScore, homeLine){
+    if (homeScore == null || awayScore == null) return 'UNKNOWN';
+    const hs = Number(homeScore), as = Number(awayScore), ln = Number(homeLine);
+    if (!Number.isFinite(hs) || !Number.isFinite(as) || !Number.isFinite(ln)) return 'UNKNOWN';
+    const adjHome = hs + ln;
+    if (adjHome > as) return 'HOME';
+    if (adjHome < as) return 'AWAY';
+    return 'PUSH';
+  }
+  async function fetchGamesForWeeks(weeks){
+    if (!weeks || weeks.length === 0) return new Map();
+    const { data, error } = await sb
+      .from('games')
+      .select('id, week, home, away, spread, spread_frozen, home_score, away_score, final, winner_ats')
+      .eq('season', SEASON)
+      .in('week', weeks);
+    if (error) { console.error(error); return new Map(); }
+    const norm = s => String(s||'').trim().toLowerCase();
+    const map = new Map();
+    (data||[]).forEach(g => map.set(`${norm(g.home)}|${norm(g.away)}`, g));
+    return map;
+  }
+  // BB:BANKROLL:LIVE_HELPERS_END
+
+  // ---------- page logic ----------
+  function computeSummary(week){
+    const rows=WAGERS.filter(w=>week==null||w.week===week);
+    let outstanding=0,wins=0,losses=0,pushes=0,net=0;
+    rows.forEach(w=>{
+      const pl=gradePayout(w.stake,w.odds,w.status,w.payout_override);
+      if(w.status==='PENDING') outstanding+=+w.stake||0;
+      if(w.status==='WON') wins++;
+      if(w.status==='LOST') losses++;
+      if(w.status==='PUSH') pushes++;
+      if(w.status!=='PENDING') net+=pl;
+    });
+    return {
+      outstanding,
+      wins,
+      losses,
+      pushes,
+      net,
+      balance:+(SETTINGS.starting_bank||0)+net-outstanding
+    };
+  }
+  function renderSummary(week){
+    const s=computeSummary(week);
+    document.getElementById('sum-outstanding').textContent=fmtMoney(s.outstanding);
+    document.getElementById('sum-wins').textContent=s.wins;
+    document.getElementById('sum-losses').textContent=s.losses;
+    document.getElementById('sum-pushes').textContent=s.pushes;
+    document.getElementById('sum-net').textContent=fmtMoney(s.net);
+    document.getElementById('sum-balance').textContent=fmtMoney(s.balance);
+  }
+
+  function renderLedger(week) {
+    const body = document.getElementById('ledger-body');
+    body.innerHTML = '';
+
+    const rows = WAGERS.filter(w => week == null || w.week === week);
+    const empty = document.getElementById('empty-ledger');
+    if (!rows.length) { empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+
+    // render ticket to avoid async races
+    const ticket = ++LEDGER_RENDER_TICKET;
+
+    // Fetch games once for all visible weeks
+    const weekSet = new Set(rows.map(w => w.week).filter(w => w != null));
+    const weeksArr = Array.from(weekSet.values());
+
+    (async () => {
+      const gamesMap = weeksArr.length ? await fetchGamesForWeeks(weeksArr) : new Map();
+      const norm = s => String(s||'').trim().toLowerCase();
+
+      // If a newer render started, abort this one
+      if (ticket !== LEDGER_RENDER_TICKET) return;
+
+      rows.forEach(w => {
+        if (ticket !== LEDGER_RENDER_TICKET) return;
+
+        const tr = document.createElement('tr');
+
+        // Placed
+        const tdDate = document.createElement('td');
+        tdDate.textContent = new Date(w.placed_at).toLocaleDateString();
+        tr.appendChild(tdDate);
+
+        // Week
+        const tdWeek = document.createElement('td');
+        const inpWeek = document.createElement('input');
+        inpWeek.type = 'number';
+        inpWeek.className = 'input small';
+        inpWeek.value = w.week ?? '';
+        inpWeek.onchange = async () => {
+          const val = inpWeek.value === '' ? null : Number(inpWeek.value);
+          await sbUpdateWagerField(w.id, { week: val });
+          await refresh(true); // auto-reload from DB
+        };
+        tdWeek.appendChild(inpWeek);
+        tr.appendChild(tdWeek);
+
+        // Type
+        const tdType = document.createElement('td');
+        const selType = document.createElement('select');
+        selType.className = 'select small';
+        ['ATS','Parlay','Teaser','Future','Other'].forEach(t => {
+          const o = document.createElement('option'); o.textContent = t; selType.appendChild(o);
+        });
+        selType.value = w.type || 'ATS';
+        selType.onchange = async () => {
+          await sbUpdateWagerField(w.id, { type: selType.value });
+          await refresh(true); // auto-reload from DB
+        };
+        tdType.appendChild(selType);
+        tr.appendChild(tdType);
+
+        // Side (Description)
+        const tdDesc = document.createElement('td');
+        const inpDesc = document.createElement('input');
+        inpDesc.className = 'input';
+        inpDesc.value = w.description || '';
+        inpDesc.placeholder = 'KC -3, DET NFC North, …';
+
+        const sideAbbr = document.createElement('span');
+        sideAbbr.className = 'side-mobile-abbr';
+        sideAbbr.textContent = compactSideText(inpDesc.value);
+
+        inpDesc.onchange = async () => {
+          await sbUpdateWagerField(w.id, { description: inpDesc.value.trim() });
+          sideAbbr.textContent = compactSideText(inpDesc.value.trim());
+          await refresh(true); // auto-reload from DB
+        };
+
+        tdDesc.appendChild(inpDesc);
+        tdDesc.appendChild(sideAbbr);
+        tr.appendChild(tdDesc);
+
+        // Odds (+/-)
+        const tdOdds = document.createElement('td');
+        const inpOdds = document.createElement('input');
+        inpOdds.type = 'text';
+        inpOdds.className = 'input small';
+        inpOdds.value = formatOdds(w.odds);
+        inpOdds.onchange = async () => {
+          const parsed = parseOdds(inpOdds.value);
+          if (parsed == null) { inpOdds.value = formatOdds(w.odds); return; }
+          await sbUpdateWagerField(w.id, { odds: parsed });
+          await refresh(true); // auto-reload from DB
+        };
+        tdOdds.appendChild(inpOdds);
+        tr.appendChild(tdOdds);
+
+        // Stake ($)
+        const tdStake = document.createElement('td');
+        const stakeWrap = document.createElement('div');
+        stakeWrap.style.display = 'flex'; stakeWrap.style.alignItems = 'center';
+        const dollar = document.createElement('span'); dollar.textContent = '$'; dollar.style.marginRight = '4px';
+        const inpStake = document.createElement('input');
+        inpStake.type = 'number'; inpStake.step = '0.01'; inpStake.className = 'input small';
+        inpStake.value = w.stake ?? 0;
+        inpStake.onchange = async () => {
+          const n = Number(inpStake.value);
+          await sbUpdateWagerField(w.id, { stake: Number.isFinite(n) ? n : 0 });
+          await refresh(true); // auto-reload from DB
+        };
+        stakeWrap.appendChild(dollar);
+        stakeWrap.appendChild(inpStake);
+        tdStake.appendChild(stakeWrap);
+        tr.appendChild(tdStake);
+
+        // Status (with live provisional tint when PENDING)
+        const tdStatus = document.createElement('td');
+        const selStatus = document.createElement('select');
+        selStatus.className = 'select small';
+        ['PENDING','WON','LOST','PUSH','VOID'].forEach(s => {
+          const o = document.createElement('option'); o.value = s; o.textContent = s; selStatus.appendChild(o);
+        });
+        selStatus.value = w.status || 'PENDING';
+
+        function applyStatusTint(el, provisional){
+          el.classList.remove('status-won','status-push','status-lost');
+          const v = (el.value || '').toUpperCase();
+
+          if (v === 'WON')  { el.classList.add('status-won');  return; }
+          if (v === 'LOST') { el.classList.add('status-lost'); return; }
+          if (v === 'PUSH') { el.classList.add('status-push'); return; }
+
+          if (!provisional) return;
+          if (provisional === 'PUSH') el.classList.add('status-push');
+          else if (provisional === 'WON') el.classList.add('status-won');
+          else if (provisional === 'LOST') el.classList.add('status-lost');
+        }
+
+        function computeProvisionalForRow(){
+          if ((w.type || 'ATS') !== 'ATS') return null;
+          if (w.status && w.status !== 'PENDING') return null;
+          if (w.week == null) return null;
+
+          const parsed = parseAtsDesc(w.description);
+          if (!parsed || !parsed.team) return null;
+
+          // Find the game in this week by team term
+          let matched = null;
+          const term = norm(parsed.team);
+          for (const g of gamesMap.values()){
+            if (g.week !== w.week) continue;
+            const h = norm(g.home), a = norm(g.away);
+            if (h.includes(term) || a.includes(term)) { matched = g; break; }
+          }
+          if (!matched) return null;
+
+          const side = matchTeamToSide(parsed.team, matched.home, matched.away);
+          if (side === 'UNKNOWN') return null;
+
+          // If final, authoritative grade
+          if (matched.final && matched.winner_ats) {
+            if (matched.winner_ats === 'PUSH') return 'PUSH';
+            return (side === matched.winner_ats) ? 'WON' : 'LOST';
+          }
+
+          // Provisional using live scores (no color if scores missing)
+          const leader = provisionalLeader(matched.home_score, matched.away_score, (matched.spread_frozen ?? matched.spread));
+          if (leader === 'UNKNOWN') return null;
+          if (leader === 'PUSH') return 'PUSH';
+          return (side === leader) ? 'WON' : 'LOST';
+        }
+
+        const provisional = computeProvisionalForRow();
+        applyStatusTint(selStatus, provisional);
+
+        selStatus.onchange = async () => {
+          await sbUpdateWagerField(w.id, { status: selStatus.value });
+          applyStatusTint(selStatus, computeProvisionalForRow());
+          await refresh(true); // auto-reload from DB
+        };
+
+        tdStatus.appendChild(selStatus);
+        tr.appendChild(tdStatus);
+
+        // Payout (computed)
+        const tdPayout = document.createElement('td');
+        tdPayout.textContent = fmtMoney(gradePayout(w.stake, w.odds, w.status, w.payout_override));
+        tr.appendChild(tdPayout);
+
+        // Delete
+        const tdDel = document.createElement('td');
+        const btnDel = document.createElement('button');
+        btnDel.className = 'btn danger tiny';
+        btnDel.textContent = 'Delete';
+        btnDel.onclick = async () => {
+          if (!confirm('Delete this wager?')) return;
+          await sbDeleteWager(w.id);
+          await refresh(true); // auto-reload from DB
+        };
+        tdDel.appendChild(btnDel);
+        tr.appendChild(tdDel);
+
+        body.appendChild(tr);
+      });
+    })();
+  }
+
+  function openAddModal() {
+    document.getElementById('wagerModalTitle').textContent = 'Add Wager';
+    document.getElementById('mw-type').value = 'ATS';
+    document.getElementById('mw-week').value = '';
+    document.getElementById('mw-desc').value = '';
+    document.getElementById('mw-odds').value = -110;
+    document.getElementById('mw-stake').value = SETTINGS.default_stake || 150;
+    document.getElementById('mw-status').value = 'PENDING';
+    document.getElementById('mw-override').value = '';
+    document.getElementById('wagerModal').style.display = 'block';
+  }
+function closeModal(){
+  document.getElementById('wagerModal').style.display='none';
+  clearPrefillFlags(); // prevent reopening on reload
+}
+
+  async function saveWagerFromModal() {
+    const weekVal = document.getElementById('mw-week').value;
+    const row = {
+      week: (weekVal === '' ? null : Number(weekVal)),
+      type: document.getElementById('mw-type').value,
+      description: document.getElementById('mw-desc').value.trim(),
+      odds: Number(document.getElementById('mw-odds').value),
+      stake: Number(document.getElementById('mw-stake').value),
+      status: document.getElementById('mw-status').value,
+      payout_override: (document.getElementById('mw-override').value === '' ? null : Number(document.getElementById('mw-override').value)),
+      notes: null
+    };
+
+    if (!row.description || !Number.isFinite(row.odds) || !Number.isFinite(row.stake)) {
+      alert('Description, Odds, and Stake are required.');
+      return;
+    }
+
+ await sbInsertWager(row);
+closeModal();          // Close after Save
+clearPrefillFlags();   // Prevent modal from reopening on reload
+await refresh(true);   // Reload from DB
+
+  }
+
+  async function saveSettings(){
+    const elMsg = document.getElementById('settingsStatus');
+    const start = parseCommaNumber(document.getElementById('startingBank').value);
+    const stake = parseCommaNumber(document.getElementById('defaultStake').value);
+    try {
+      await sbSaveBankrollSettings({ starting_bank: start, default_stake: stake });
+      SETTINGS.starting_bank = start;
+      SETTINGS.default_stake = stake;
+      document.getElementById('startingBank').value  = formatWithCommas(start);
+      document.getElementById('defaultStake').value  = formatWithCommas(stake);
+      elMsg.textContent = 'Saved';
+      setTimeout(()=> elMsg.textContent = '', 1200);
+      renderSummary(null);
+    } catch (e) {
+      elMsg.textContent = 'Error';
+    }
+  }
+
+  async function populateWeeksForModal() {
+    const weeks = await sbLoadWeeks();
+    const sel = document.getElementById('mw-week');
+    if (!sel) return;
+    sel.innerHTML = '';
+    const blank = document.createElement('option');
+    blank.value = '';
+    blank.textContent = '';
+    sel.appendChild(blank);
+    weeks
+      .map(w => w.week)
+      .sort((a,b)=>a-b)
+      .forEach(w => {
+        const o = document.createElement('option');
+        o.value = String(w);
+        o.textContent = 'Week ' + w;
+        sel.appendChild(o);
+      });
+  }
+<!-- BB:BANKROLL:PREFILL_CLEANUP_START -->
+
+function clearPrefillFlags() {
+  try {
+    const url = new URL(window.location.href);
+    // remove known prefill params
+    ['type','week','desc','odds','stake'].forEach(k => url.searchParams.delete(k));
+    // clear #add or any other hash
+    url.hash = '';
+    // replace without reloading
+    window.history.replaceState({}, document.title, url.toString());
+  } catch (_) { /* noop */ }
+}
+
+<!-- BB:BANKROLL:PREFILL_CLEANUP_END -->
+
+
+  function applyPrefillFromUrl() {
+    const qs = new URLSearchParams(window.location.search);
+    const fromHash = window.location.hash === '#add';
+
+    if (!(qs.has('type') || qs.has('desc') || qs.has('odds') || qs.has('stake') || qs.has('week') || fromHash)) {
+      return;
+    }
+
+    openAddModal();
+
+    const type  = qs.get('type')  || 'ATS';
+    const week  = qs.get('week');
+    const desc  = qs.get('desc')  || '';
+    const oddsS = qs.get('odds');
+    const stakeS= qs.get('stake');
+
+    const elType  = document.getElementById('mw-type');
+    const elWeek  = document.getElementById('mw-week');
+    const elDesc  = document.getElementById('mw-desc');
+    const elOdds  = document.getElementById('mw-odds');
+    const elStake = document.getElementById('mw-stake');
+    const elStat  = document.getElementById('mw-status');
+    const elOvr   = document.getElementById('mw-override');
+
+    if (!elType || !elWeek || !elDesc || !elOdds || !elStake || !elStat || !elOvr) {
+      console.warn('Prefill aborted: modal inputs not found.');
+      return;
+    }
+
+    elType.value = type;
+
+    if (week && elWeek.querySelector(`option[value="${String(week)}"]`)) {
+      elWeek.value = String(week);
+    } else {
+      elWeek.value = '';
+    }
+
+    elDesc.value = desc;
+
+    const parsedOdds = parseOdds(oddsS);
+    elOdds.value = parsedOdds != null ? parsedOdds : -110;
+
+    const parsedStake = (stakeS != null && stakeS !== '') ? Number(stakeS) : NaN;	
+    elStake.value = Number.isFinite(parsedStake) ? parsedStake : (SETTINGS.default_stake || 150);
+
+    elStat.value = 'PENDING';
+    elOvr.value = '';
+  }
+
+  async function refresh(reloadWagers=true){
+    if (reloadWagers) {
+      try { WAGERS = await sbLoadWagers(null); } catch(e){ console.error(e); }
+    }
+    renderSummary(null);
+    renderLedger(null);
+  }
+
+  async function init(){
+    // Buttons
+    document.getElementById('btn-add').onclick = openAddModal;
+    document.getElementById('btn-close-modal').onclick = closeModal;
+    document.getElementById('btn-save-wager').onclick = saveWagerFromModal;
+    document.getElementById('btn-save-settings').onclick = saveSettings;
+
+    // Load settings & wagers
+    try { SETTINGS = await sbLoadBankrollSettings(); } catch(e){ console.error(e); }
+    try { WAGERS   = await sbLoadWagers(null); }     catch(e){ console.error(e); }
+
+    // Fill settings inputs (with commas + blur niceties)
+    const sbEl = document.getElementById('startingBank');
+    const dsEl = document.getElementById('defaultStake');
+    sbEl.value = formatWithCommas(SETTINGS.starting_bank);
+    dsEl.value = formatWithCommas(SETTINGS.default_stake);
+    ['startingBank','defaultStake'].forEach(id=>{
+      const el = document.getElementById(id);
+      el.addEventListener('focus', ()=>{ el.value = String(el.value).replace(/,/g,''); });
+      el.addEventListener('blur',  ()=>{ el.value = formatWithCommas(el.value); });
+    });
+
+    // Prepare week options for modal BEFORE prefill
+    try { await populateWeeksForModal(); } catch(e){ console.error(e); }
+
+    // Initial render
+    renderSummary(null);
+    renderLedger(null);
+
+    // If we arrived from Group with prefill in the URL, open & fill the modal now (one-time)
+    try { applyPrefillFromUrl(); } catch(e){ console.error(e); }
+  }
+  document.addEventListener('DOMContentLoaded', init);
+  </script>
+</head>
+<body>
+<header>
+  <div class="nav">
+    <div class="brand"><img src="assets/BB1_clean_transparent_optimized.png" class="brand-logo" alt="Betting Buddies"></div>
+    <nav class="nav-links">
+      <a href="picks.html">Picks</a>
+      <a href="group.html">Group</a>
+      <a href="standings.html">Standings</a>
+      <a href="bankroll.html" class="active">Bankroll</a>
+    </nav>
+    <div class="spacer"></div><span class="badge">Season 2025</span>
+  </div>
+</header>
+
+<main>
+  <div class="card">
+    <!-- Controls -->
+    <div class="toolbar">
+      <div><label>Scope:<select id="scope-select" class="select"><option value="season">Season</option></select></label></div>
+      <div class="spacer"></div>
+      <div><button id="btn-add" class="btn btn-primary">＋ Add Wager</button></div>
+    </div>
+
+    <!-- Settings -->
+    <!-- BB:BANKROLL:SETTINGS_FORM_START -->
+    <h3 style="margin:16px 0 8px;">Settings</h3>
+    <!-- BB:BANKROLL:SUMMARY_CARDS_START -->
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-title">Starting Bank</div>
+        <div class="summary-value editable-money"><span>$</span><input id="startingBank" type="text"/></div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-title">Default Stake</div>
+        <div class="summary-value editable-money"><span>$</span><input id="defaultStake" type="text"/></div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:10px;">
+      <button id="btn-save-settings" class="btn">Save</button>
+      <span id="settingsStatus" class="muted" style="margin-left:8px;"></span>
+    </div>
+    <!-- BB:BANKROLL:SETTINGS_FORM_END -->
+
+    <!-- Summary -->
+    <!-- BB:BANKROLL:SUMMARY_CARDS_START -->
+    <div class="summary-grid">
+      <div class="summary-card"><div class="summary-title">Outstanding</div><div class="summary-value" id="sum-outstanding">$0</div></div>
+      <div class="summary-card"><div class="summary-title">Win</div><div class="summary-value" id="sum-wins">0</div></div>
+      <div class="summary-card"><div class="summary-title">Loss</div><div class="summary-value" id="sum-losses">0</div></div>
+      <div class="summary-card"><div class="summary-title">Push</div><div class="summary-value" id="sum-pushes">0</div></div>
+      <div class="summary-card highlight"><div class="summary-title">Net ±</div><div class="summary-value" id="sum-net">$0</div></div>
+      <div class="summary-card highlight"><div class="summary-title">Current Balance</div><div class="summary-value" id="sum-balance">$0</div></div>
+    </div>
+    <!-- BB:BANKROLL:SUMMARY_CARDS_END -->
+
+    <!-- Ledger -->
+    <h3 style="margin:16px 0 8px;">Wagers</h3>
+    <div class="table-wrap">
+      <!-- BB:BANKROLL:TABLE_DESKTOP_START -->
+      <table class="table" id="ledger">
+        <thead>
+          <tr>
+            <th>Placed</th>
+            <th>Week</th>
+            <th>Type</th>
+            <th id="col-side">
+              <span class="hide-mobile">Description</span>
+              <span class="show-mobile">Side</span>
+            </th>
+            <th>Odds</th>
+            <th>Stake</th>
+            <th>Status</th>
+            <th>Payout</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="ledger-body"></tbody>
+      </table>
+      <!-- BB:BANKROLL:TABLE_DESKTOP_END -->
+    </div>
+    <div id="empty-ledger" class="muted" style="display:none;padding:12px;">No wagers yet.</div>
+  </div>
+</main>
+
+<!-- Modal -->
+<!-- BB:BANKROLL:ADD_BET_MODAL_START -->
+<div id="wagerModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;">
+  <div style="max-width:800px;margin:70px auto;background:#111;color:#eee;border-radius:10px;padding:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h3 id="wagerModalTitle">Add Wager</h3>
+      <button id="btn-close-modal" class="btn">Close</button>
+    </div>
+    <div class="grid2">
+      <label>Type<select id="mw-type" class="select"><option>ATS</option><option>Parlay</option><option>Teaser</option><option>Future</option><option>Other</option></select></label>
+      <label>Week<select id="mw-week" class="select"></select></label>
+      <label>Description<input id="mw-desc" class="input"/></label>
+      <label>Odds<input id="mw-odds" type="number" class="input" value="-110"/></label>
+      <label>Stake<input id="mw-stake" type="number" class="input"/></label>
+      <label>Status<select id="mw-status" class="select"><option>PENDING</option><option>WON</option><option>LOST</option><option>PUSH</option><option>VOID</option></select></label>
+      <label>Payout Override<input id="mw-override" type="number" class="input"/></label>
+    </div>
+    <div style="text-align:right;margin-top:12px;">
+      <button id="btn-save-wager" class="btn btn-primary">Save</button>
+    </div>
+  </div>
+</div>
+<!-- BB:BANKROLL:ADD_BET_MODAL_END -->
+</body>
+</html>

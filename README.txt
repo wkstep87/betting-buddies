@@ -1,0 +1,1 @@
+See chat message for the full step-by-step; paste SQL from there. 1) Edit assets/config.js 2) Run SQL 3) (Optional) deploy edge functions 4) Open picks.html and group.html
