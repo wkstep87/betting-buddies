@@ -703,7 +703,6 @@
 
     try {
       const week = getWeekNumber();
-const week = getWeekNumber();
 
 // Save any selection that has *either* a team OR a confidence set.
 // If one is missing, upsert NULL so users can stage one part and finish later.
@@ -727,7 +726,7 @@ const rows = (__pendingSelections || [])
       }
 
       closeConfirmModal();
-      showStatus(rows.length ? 'Saved!' : 'Nothing to save yet (no completed picks).', false);
+      showStatus(rows.length ? 'Saved!' : 'Nothing to save yet (no selections started).', false);
     } catch (e) {
       showStatus(String(e), true);
     } finally {
