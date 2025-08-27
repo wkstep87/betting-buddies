@@ -453,14 +453,24 @@ async function sbGetTeamStats(a, b) {
   if (error) throw error;
   return data;
 }
+/* =========================
+   Invite-link resolver
+   ========================= */
+async function sbResolveLink(token) {
+  if (!token) throw new Error('Token required');
+  const { data, error } = await sb.functions.invoke('resolve-link', {
+    body: { t: String(token) }   // POST body; function echoes username
+  });
+  if (error) throw error;
+  return data; // { ok, username }
+}
 
 /* =========================
    Small utilities
    ========================= */
 
-// OPTIONAL: expose a setter in case username input changes at runtime
 function __setUsername(newName) {
-  USERNAME = (newName && String(newName).trim()) || 'Will';
+  USERNAME = (newName && String(newName).trim()) || '';
 }
 window.__setUsername = __setUsername;
 
@@ -477,6 +487,7 @@ Object.assign(window, {
   sbLoadCompletedGames,
   sbLoadAllPicks,
   computeAts,
+  sbResolveLink,
   sbLoadBankrollSettings,
   sbSaveBankrollSettings,
   sbLoadWagers,
