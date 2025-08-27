@@ -1007,7 +1007,7 @@ body.is-mobile .only-desktop { display: none; }
 }
 /* Brand logo */
 .brand-logo {
-  height: 30px;       /* adjust size if needed */
+  height: 100px;       /* adjust size if needed */
   display: block;
 }
 /* --- Normalize header/nav layout across all pages --- */
@@ -1297,3 +1297,7 @@ header { text-align: initial; } /* stomp any accidental centering */
   display: inline-block;
   vertical-align: middle;
 }
+
+/* Override: bigger header logo */
+.brand-logo { height: 100px !important; }
+
