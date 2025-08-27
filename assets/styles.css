@@ -1290,3 +1290,10 @@ header { text-align: initial; } /* stomp any accidental centering */
 }
 
 
+/* Force bigger header logo */
+.navbar-brand img {
+  height: 500px !important;   /* try 50px first */
+  width: auto !important;    /* keep aspect ratio */
+  display: inline-block;
+  vertical-align: middle;
+}
