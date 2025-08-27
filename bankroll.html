@@ -201,7 +201,7 @@
         // Placed
 const tdDate = document.createElement('td');
 const dt = w.placed_at ? new Date(w.placed_at) : null;
-tdDate.textContent = (dt && !isNaN(dt.getTime())) ? dt.toLocaleString() : '—';
+tdDate.textContent = (dt ) ? dt.toLocaleString() : '—';
 tr.appendChild(tdDate);
 
 
