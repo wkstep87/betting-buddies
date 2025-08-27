@@ -5,7 +5,8 @@
 window.sb = window.sb || supabase.createClient(window.CONFIG.SUPABASE_URL, window.CONFIG.SUPABASE_ANON_KEY);
 const sb = window.sb;
 const SEASON = window.CONFIG.SEASON;
-let USERNAME = window.CONFIG.USERNAME || 'Will';
+// In production, never fall back to 'Will'. Leave blank if not provided.
+let USERNAME = (window.CONFIG.USERNAME && String(window.CONFIG.USERNAME).trim()) || '';
 
 /* =========================
    Weeks / Games / Lock
