@@ -199,8 +199,8 @@
         const tr = document.createElement('tr');
 
         // Placed
-        const tdDate = document.createElement('td');
-        tdDate.textContent = new Date(w.placed_at).toLocaleDateString();
+        const dt = row.placed_at ? new Date(row.placed_at) : null;
+cell.textContent = dt && !isNaN(dt) ? dt.toLocaleString() : '—';
         tr.appendChild(tdDate);
 
         // Week
