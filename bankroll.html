@@ -199,9 +199,12 @@
         const tr = document.createElement('tr');
 
         // Placed
+// Placed (date only)
 const tdDate = document.createElement('td');
 const dt = w.placed_at ? new Date(w.placed_at) : null;
-tdDate.textContent = (dt ) ? dt.toLocaleString() : '—';
+tdDate.textContent = (dt && !isNaN(dt.getTime()))
+  ? dt.toLocaleDateString()   // no time
+  : '—';
 tr.appendChild(tdDate);
 
 

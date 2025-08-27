@@ -296,7 +296,7 @@ async function sbSaveBankrollSettings({ starting_bank, default_stake }) {
 // Wagers
 async function sbLoadWagers(week) {
   let q = sb.from('wagers')
-    .select('id, week, placed_at ,description, type, odds, stake, result, status, payout_override')
+    .select('id, week, placed_at, description, type, side, odds, stake, result, status, payout_override')
     .eq('season', SEASON);
 
   // Only add a week filter if a concrete number was provided.
