@@ -7,8 +7,11 @@ const sb = window.sb;
 const SEASON = window.CONFIG.SEASON;
 let USERNAME = window.CONFIG.USERNAME || 'Will';
 
+/* =========================
+   Weeks / Games / Lock
+   ========================= */
+
 // Weeks list (week, locked)
-// BB:SB:WEEKS_API_START
 async function sbLoadWeeks() {
   const { data, error } = await sb
     .from('weeks')
@@ -18,10 +21,8 @@ async function sbLoadWeeks() {
   if (error) throw error;
   return data || [];
 }
-// BB:SB:WEEKS_API_END
 
 // Games for a week
-// BB:SB:GAMES_API_START
 async function sbLoadGames(week) {
   const { data, error } = await sb
     .from('games')
@@ -30,11 +31,9 @@ async function sbLoadGames(week) {
     .eq('week', week)
     .order('commence_time', { ascending: true })
     .order('id', { ascending: true });
-
   if (error) throw error;
   return data || [];
 }
-// BB:SB:GAMES_API_END
 
 // Lock state for a week
 async function sbLoadWeekLock(week) {
@@ -48,7 +47,10 @@ async function sbLoadWeekLock(week) {
   return data?.locked ?? false;
 }
 
-// BB:SB:PICKS_API_START
+/* =========================
+   Picks API
+   ========================= */
+
 async function sbLoadMyPicks(week) {
   const { data, error } = await sb
     .from('picks')
@@ -59,12 +61,12 @@ async function sbLoadMyPicks(week) {
       result,
       games!inner(id, home, away, final, winner_ats)
     `)
-    .eq('season', SEASON)
-    .eq('week', week)
-    .eq('username', USERNAME);
+  .eq('season', SEASON)
+  .eq('week', week)
+  .eq('username', USERNAME);
   if (error) throw error;
 
-  // Flatten joined game fields so UI can tint
+  // Flatten joined game fields for UI
   const by = {};
   (data || []).forEach(r => {
     by[r.game_id] = {
@@ -79,28 +81,24 @@ async function sbLoadMyPicks(week) {
   });
   return by;
 }
-// BB:SB:PICKS_API_END
 
 // Save a single pick
-// BB:SB:PICKS_SAVE_API_START
 async function sbSavePick(week, gameId, team, confidence) {
   const row = {
     username: USERNAME,
     season: SEASON,
     week,
     game_id: gameId,
-    team: team,                 // can be null
-    confidence: confidence      // can be null
+    team,                 // nullable
+    confidence            // nullable
   };
   const { error } = await sb
     .from('picks')
     .upsert(row, { onConflict: 'username,season,week,game_id' });
   if (error) throw error;
 }
-// BB:SB:PICKS_SAVE_API_END
 
-// Returns ALL games for the week with away/home sums, net, and spread (for Add Bet)
-// BB:SB:CONSENSUS_API_START
+// Consensus (for Add Bet prefill, standings net, etc.)
 async function sbLoadConsensus(week) {
   const { data: picks, error: e1 } = await sb
     .from('picks')
@@ -118,22 +116,19 @@ async function sbLoadConsensus(week) {
   if (e2) throw e2;
 
   const map = new Map(
-    (games || []).map(g => [
-      g.id,
-      {
-        id: g.id,
-        away: g.away,
-        home: g.home,
-        spread: g.spread,
-        spread_frozen: g.spread_frozen,
-        home_score: g.home_score,
-        away_score: g.away_score,
-        final: g.final,
-        winner_ats: g.winner_ats,
-        awaySum: 0,
-        homeSum: 0
-      }
-    ])
+    (games || []).map(g => [g.id, {
+      id: g.id,
+      away: g.away,
+      home: g.home,
+      spread: g.spread,
+      spread_frozen: g.spread_frozen,
+      home_score: g.home_score,
+      away_score: g.away_score,
+      final: g.final,
+      winner_ats: g.winner_ats,
+      awaySum: 0,
+      homeSum: 0
+    }])
   );
 
   (picks || []).forEach(p => {
@@ -143,7 +138,7 @@ async function sbLoadConsensus(week) {
     else if (p.team === bucket.away) bucket.awaySum += (p.confidence ?? 0);
   });
 
-  const rows = [...map.values()].map(r => {
+  const rows = Array.from(map.values()).map(r => {
     const homeStr = r.homeSum || 0;
     const awayStr = r.awaySum || 0;
 
@@ -171,9 +166,8 @@ async function sbLoadConsensus(week) {
 
   return rows;
 }
-// BB:SB:CONSENSUS_API_END
 
-// All picks for a single game (for row expansion)
+// All picks for a single game (row expansion)
 async function sbLoadGamePicks(week, gameId) {
   const { data, error } = await sb
     .from('picks')
@@ -186,7 +180,7 @@ async function sbLoadGamePicks(week, gameId) {
   return data || [];
 }
 
-// All picks for a set of users for one week (single query)
+// All picks for a set of users (one week)
 async function sbLoadUsersWeekPicks(week, users) {
   const { data, error } = await sb
     .from('picks')
@@ -198,7 +192,10 @@ async function sbLoadUsersWeekPicks(week, users) {
   return data || [];
 }
 
-// ===== Standings / ATS helpers =====
+/* =========================
+   Standings / ATS helpers
+   ========================= */
+
 async function sbLoadCompletedGames(week = null) {
   let q = sb
     .from('games')
@@ -228,13 +225,7 @@ function computeAts(games, picks, users) {
 
   const u = {};
   users.forEach(name => {
-    u[name] = {
-      points: 0,
-      wins: 0,
-      losses: 0,
-      pushes: 0,
-      weekly: new Map(),
-    };
+    u[name] = { points: 0, wins: 0, losses: 0, pushes: 0, weekly: new Map() };
   });
 
   picks.forEach(p => {
@@ -273,54 +264,68 @@ function computeAts(games, picks, users) {
   return { perUser: u, finalizedWeeks };
 }
 
-// ===== Bankroll helpers =====
-// BB:SB:BANKROLL_SETTINGS_API_START
+/* =========================
+   Bankroll
+   ========================= */
+
+// Settings
 async function sbLoadBankrollSettings() {
   const { data, error } = await sb
     .from('bankroll_settings')
-    .select('id, season, starting_bank, default_stake, updated_at')
+    .select('starting_bank, default_stake')
     .eq('season', SEASON)
     .maybeSingle();
-  if (error && error.code !== 'PGRST116') throw error;
-  return data || { id: null, season: SEASON, starting_bank: 3000, default_stake: 150 };
-}
-// BB:SB:BANKROLL_SETTINGS_API_END
-
-async function sbSaveBankrollSettings(values) {
-  const { data, error } = await sb
-    .from('bankroll_settings')
-    .upsert({ season: SEASON, ...values }, { onConflict: 'season' })
-    .select()
-    .single();
   if (error) throw error;
-  return data;
+  return data || { starting_bank: 0, default_stake: 0 };
 }
 
-// BB:SB:WAGERS_API_START
-async function sbLoadWagers(week /* number|null */) {
-  let q = sb.from('wagers')
-    .select('id, season, week, game_id, placed_at, type, description, side, odds, stake, status, payout_override, notes')
+async function sbSaveBankrollSettings({ starting_bank, default_stake }) {
+  const payload = {
+    season: SEASON,
+    starting_bank: Number(String(starting_bank).replace(/,/g,'')) || 0,
+    default_stake: Number(String(default_stake).replace(/,/g,'')) || 0,
+    updated_at: new Date().toISOString(),
+  };
+  const { error } = await sb
+    .from('bankroll_settings')
+    .upsert(payload, { onConflict: 'season' });
+  if (error) throw error;
+}
+
+// Wagers
+async function sbLoadWagers(week) {
+  const { data, error } = await sb
+    .from('wagers')
+    .select('id, week, description, type, side, odds, stake, result, status, payout_override')
     .eq('season', SEASON)
-    .order('placed_at', { ascending: false })
-    .order('id', { ascending: false });
-  if (week != null) q = q.eq('week', week);
-  const { data, error } = await q;
+    .eq('week', week)
+    .order('id');
   if (error) throw error;
   return data || [];
 }
-// BB:SB:WAGERS_API_END
 
-async function sbInsertWager(row) {
-  const payload = { season: SEASON, ...row };
-  const { data, error } = await sb.from('wagers').insert(payload).select().single();
+async function sbInsertWager(w) {
+  const row = {
+    season: SEASON,
+    week: w.week,
+    description: w.description || '',
+    type: w.type || 'ATS',
+    side: w.side || null,
+    odds: w.odds ?? null,
+    stake: w.stake ?? null,
+    result: w.result ?? null,
+    status: w.status ?? null,
+    payout_override: w.payout_override ?? null
+  };
+  const { error } = await sb.from('wagers').insert(row);
   if (error) throw error;
-  return data;
 }
 
-async function sbUpdateWagerField(id, patch) {
-  const { data, error } = await sb.from('wagers').update(patch).eq('id', id).select().single();
+async function sbUpdateWagerField(id, field, value) {
+  const patch = {};
+  patch[field] = value;
+  const { error } = await sb.from('wagers').update(patch).eq('id', id);
   if (error) throw error;
-  return data;
 }
 
 async function sbDeleteWager(id) {
@@ -349,20 +354,19 @@ function gradePayout(stake, odds, status, override) {
   }
 }
 
-// Admin lock/unlock
-// BB:SB:ADMIN_LOCK_API_START
+/* =========================
+   Admin / Edge helpers
+   ========================= */
+
+// Lock/unlock week
 async function adminLock(week, action) {
   const { error } = await sb.functions.invoke('admin-lock', {
-    body: {
-      season: SEASON,
-      week,
-      action,         // 'lock' | 'unlock'
-      username: USERNAME
-    }
+    body: { season: SEASON, week, action, username: USERNAME }
   });
   if (error) throw error;
 }
-// BB:SB:FREEZE_API_START
+
+// Freeze spread (game or whole week)
 async function sbFreezeGame(gameId) {
   const { data, error } = await sb.functions.invoke('freeze-spread', {
     body: { season: SEASON, week: null, game_id: gameId }
@@ -370,7 +374,6 @@ async function sbFreezeGame(gameId) {
   if (error) throw error;
   return data;
 }
-
 async function sbFreezeWeek(week) {
   const { data, error } = await sb.functions.invoke('freeze-spread', {
     body: { season: SEASON, week, game_id: null }
@@ -378,10 +381,19 @@ async function sbFreezeWeek(week) {
   if (error) throw error;
   return data;
 }
-// BB:SB:FREEZE_API_END
 
-// === Season default week helpers ===
-// BB:SB:SEASON_SETTINGS_START
+// On-demand scores/grades
+async function sbPullScoresNow(week) {
+  const payload = { season: SEASON, week: (Number.isFinite(Number(week)) ? Number(week) : null) };
+  const { data, error } = await sb.functions.invoke('scores-run', { body: payload });
+  if (error) throw error;
+  return data || { ok: true, message: 'Triggered.' };
+}
+
+/* =========================
+   Season “Default Week”
+   ========================= */
+
 async function sbGetCurrentWeek() {
   const { data, error } = await sb
     .from('season_settings')
@@ -400,7 +412,50 @@ async function sbSetCurrentWeek(week) {
   if (error) throw error;
   return true;
 }
-// BB:SB:SEASON_SETTINGS_END
+
+/* =========================
+   Research (Edge: /research)
+   ========================= */
+
+// Normalizes flexible call shapes
+function __bbNormalizeTeamArgs(a, b, c) {
+  if (typeof a === 'object' && a && !Array.isArray(a)) {
+    return {
+      team: a.team,
+      season: a.season ?? SEASON,
+      week: a.week ?? null,
+    };
+  }
+  if (typeof a === 'string') {
+    return { team: a, season: b ?? SEASON, week: c ?? null };
+  }
+  return { team: null, season: SEASON, week: null };
+}
+
+// GET to Edge function via invoke body; edge converts body to fetch params
+async function sbGetInjuries(a, b, c) {
+  const { team, season, week } = __bbNormalizeTeamArgs(a, b, c);
+  if (!team) throw new Error('sbGetInjuries: team is required');
+  const { data, error } = await sb.functions.invoke('research', {
+    body: { type: 'injuries', team, season, week }
+  });
+  if (error) throw error;
+  return data;
+}
+
+async function sbGetTeamStats(a, b) {
+  const { team, season } = __bbNormalizeTeamArgs(a, b, null);
+  if (!team) throw new Error('sbGetTeamStats: team is required');
+  const { data, error } = await sb.functions.invoke('research', {
+    body: { type: 'team_stats', team, season }
+  });
+  if (error) throw error;
+  return data;
+}
+
+/* =========================
+   Small utilities
+   ========================= */
 
 // OPTIONAL: expose a setter in case username input changes at runtime
 function __setUsername(newName) {
@@ -430,6 +485,11 @@ Object.assign(window, {
   adminLock,
   sbFreezeGame,
   sbFreezeWeek,
+  sbPullScoresNow,
+  sbGetInjuries,
+  sbGetTeamStats,
   sbGetCurrentWeek,
-  sbSetCurrentWeek
+  sbSetCurrentWeek,
+  gradePayout,            // optionally useful in UI
+  americanToDecimal       // optionally useful in UI
 });

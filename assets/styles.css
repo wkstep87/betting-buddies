@@ -254,7 +254,7 @@ td > .pill + .btn.tiny { margin-left: 8px; }
   opacity: 0.9;
   box-shadow: 0 0 4px rgba(255,255,255,0.25);
 }
-addBtn.title = 'Prefill in Bankroll';
+
 /* ===== Bankroll CTA hovers (Add Wager / Save Settings) ===== */
 #btn-add.btn.btn-primary,
 #btn-save-settings.btn {
@@ -1210,7 +1210,8 @@ header { text-align: initial; } /* stomp any accidental centering */
 /* BB:CSS:PICKS:ADMIN_HOVERS_AND_FREEZE_CELL */
 @media (min-width: 921px) {
   /* Weekly admin buttons: subtle hover */
-  #btn-set-current-week.admin:hover,
+  #btn-default-week.admin:hover,
+  #btn-pull-scores.admin:hover,
   #btn-freeze-week.admin:hover,
   #btn-lock.admin:hover,
   #btn-unlock.admin:hover {
