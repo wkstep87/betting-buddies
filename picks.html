@@ -703,16 +703,21 @@
 
     try {
       const week = getWeekNumber();
-      const rows = (__pendingSelections || [])
-        .filter(s => s.team && s.confidence != null)
-        .map(s => ({
-          username: localStorage.getItem('username') || (window.CONFIG.USERNAME || ''),
-          season: window.CONFIG.SEASON,
-          week,
-          game_id: s.game_id,
-          team: s.team,
-          confidence: s.confidence
-        }));
+const week = getWeekNumber();
+
+// Save any selection that has *either* a team OR a confidence set.
+// If one is missing, upsert NULL so users can stage one part and finish later.
+const rows = (__pendingSelections || [])
+  .filter(s => (s.team || s.confidence != null))
+  .map(s => ({
+    username: localStorage.getItem('username') || (window.CONFIG.USERNAME || ''),
+    season: window.CONFIG.SEASON,
+    week,
+    game_id: s.game_id,
+    team: s.team || null,
+    confidence: (s.confidence != null ? s.confidence : null)
+  }));
+
 
       if (rows.length) {
         const { error } = await window.sb
