@@ -742,6 +742,8 @@ const rows = (__pendingSelections || [])
     const confirmBtn = document.getElementById('confirmSaveBtn');
     const cancelBtn = document.getElementById('cancelConfirmBtn');
 
+  // Ensure the pending selection buffer exists.
+    if (!window.__pendingSelections) window.__pendingSelections = [];
     if (saveBtn)   saveBtn.addEventListener('click', handleSaveClick);
     if (confirmBtn)confirmBtn.addEventListener('click', handleConfirmSave);
     if (cancelBtn) cancelBtn.addEventListener('click', closeConfirmModal);
