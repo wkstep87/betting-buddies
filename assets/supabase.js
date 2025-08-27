@@ -295,12 +295,20 @@ async function sbSaveBankrollSettings({ starting_bank, default_stake }) {
 
 // Wagers
 async function sbLoadWagers(week) {
-  const { data, error } = await sb
-    .from('wagers')
+  let q = sb.from('wagers')
     .select('id, week, description, type, side, odds, stake, result, status, payout_override')
-    .eq('season', SEASON)
-    .eq('week', week)
-    .order('id');
+    .eq('season', SEASON);
+
+  // Only add a week filter if a concrete number was provided.
+  if (Number.isFinite(Number(week))) {
+    q = q.eq('week', Number(week));
+  }
+  // If you ever need to fetch rows where week IS NULL specifically, use:
+  // else if (week === null) { q = q.is('week', null); }
+
+  q = q.order('id', { ascending: true });
+
+  const { data, error } = await q;
   if (error) throw error;
   return data || [];
 }
