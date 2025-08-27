@@ -386,7 +386,7 @@ async function sbFreezeWeek(week) {
 // On-demand scores/grades
 async function sbPullScoresNow(week) {
   const payload = { season: SEASON, week: (Number.isFinite(Number(week)) ? Number(week) : null) };
-  const { data, error } = await sb.functions.invoke('scores-run', { body: payload });
+  const { data, error } = await sb.functions.invoke('scores-cron', { body: payload });
   if (error) throw error;
   return data || { ok: true, message: 'Triggered.' };
 }
