@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Research Test</title>
+</head>
+<body>
+<h3>Research Function Test</h3>
+<button onclick="testInjuries()">Test KC Injuries</button>
+<button onclick="testStats()">Test KC Stats</button>
+<pre id="out"></pre>
+
+<script>
+async function callResearch(type, team) {
+  const url = 'https://umsvkzizysmdobgvjzfc.functions.supabase.co/research';
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json' },
+    body: JSON.stringify({ type, season: 2025, team })
+  });
+  const data = await resp.json();
+  document.getElementById('out').textContent = JSON.stringify(data, null, 2);
+}
+
+function testInjuries(){
+  callResearch('injuries', 'Kansas City Chiefs');
+}
+function testStats(){
+  callResearch('team_stats', 'Kansas City Chiefs');
+}
+</script>
+</body>
+</html>
