@@ -173,7 +173,37 @@
         <div class="bb-row"><span class="l">Line</span><span class="r" id="bbLine">—</span></div>
         <div class="bb-row"><span class="l">Kickoff</span><span class="r" id="bbKick">—</span></div>
       </div>
+    <div class="bb-card" style="margin-top:12px">
+  <h4>ATS Snapshot</h4>
+  <div class="bb-row"><span class="l">Overall</span><span class="r" id="bbAtsOverall">—</span></div>
+  <div class="bb-row"><span class="l">Home</span><span class="r" id="bbAtsHome">—</span></div>
+  <div class="bb-row"><span class="l">Away</span><span class="r" id="bbAtsAway">—</span></div>
+</div>
+
+<div class="bb-grid" style="margin-top:12px">
+  <div class="bb-card">
+    <h4>Key Injuries</h4>
+    <div id="bbInjuryLoading" class="bb-row"><span class="l">Loading…</span><span class="r"></span></div>
+    <div id="bbInjuryEmpty" class="bb-row" style="display:none"><span class="l">No key injuries reported.</span><span class="r"></span></div>
+    <div id="bbInjuryList"></div>
+  </div>
+  <div class="bb-card">
+    <h4>Team Efficiency</h4>
+    <div class="bb-row"><span class="l">Off. PPG</span><span class="r" id="bbOffPpg">—</span></div>
+    <div class="bb-row"><span class="l">Def. PAPG</span><span class="r" id="bbDefPapg">—</span></div>
+    <div class="bb-row"><span class="l">Total Yds / Allowed</span>
+      <span class="r"><span id="bbOffYdsPg">—</span> / <span id="bbDefYdsPg">—</span></span>
     </div>
+    <div class="bb-row"><span class="l">Pass Off / Def Rank</span>
+      <span class="r"><span id="bbPassOffRank">—</span> / <span id="bbPassDefRank">—</span></span>
+    </div>
+    <div class="bb-row"><span class="l">Rush Off / Def Rank</span>
+      <span class="r"><span id="bbRushOffRank">—</span> / <span id="bbRushDefRank">—</span></span>
+    </div>
+  </div>
+</div>
+<!-- BB:RESEARCH:INSERT_CARDS_END -->
+</div>
   </div>
 </div>
 
@@ -635,6 +665,100 @@ async function init(){
   initSaveFlow();
   await render();
 }
+<script>
+// BB:RESEARCH:SCRIPT_START
+function bbSplitCityNick(full){
+  const parts = String(full||'').trim().split(/\s+/);
+  if (parts.length <= 1) return { city: full, nick: '' };
+  return { city: parts.slice(0,-1).join(' '), nick: parts.slice(-1)[0] };
+}
+function bbSetText(id, v){ const el=document.getElementById(id); if(el) el.textContent = (v ?? '—'); }
+function bbShow(id, on){ const el=document.getElementById(id); if(el) el.style.display = on ? '' : 'none'; }
+
+async function openTeamResearch({ team, opponent, week, game }) {
+  // Open modal
+  const bd = document.getElementById('researchBackdrop');
+  if (bd) bd.style.display = 'block';
+
+  // Header/logo
+  const slot = document.getElementById('bbResearchLogoSlot');
+  if (slot) { slot.innerHTML = ''; slot.appendChild(makeTeamLogoOnly(team)); }
+  const { city, nick } = bbSplitCityNick(team);
+  bbSetText('bbTeamCity', city);
+  bbSetText('bbTeamNick', nick);
+
+  // This week
+  bbSetText('bbWeek', week);
+  bbSetText('bbOpponent', opponent || '—');
+  const line = (game?.spread_frozen ?? game?.spread);
+  const lineTxt = (line==null || line==='') ? '—' : (Number(line)>0 ? `+${Number(line)}` : String(Number(line)));
+  bbSetText('bbLine', lineTxt);
+  bbSetText('bbKick', kickoffText(game?.commence_time) || '—');
+
+  // ATS snapshot (compute server-side from games table)
+  try {
+    const ats = await sbComputeTeamAts(team);
+    const fmt = r => `${r.w}-${r.l}${r.p?'-'+r.p:''}`;
+    bbSetText('bbAtsOverall', fmt(ats.overall));
+    bbSetText('bbAtsHome',    fmt(ats.home));
+    bbSetText('bbAtsAway',    fmt(ats.away));
+  } catch(e){ console.error('ATS compute', e); bbSetText('bbAtsOverall','—'); bbSetText('bbAtsHome','—'); bbSetText('bbAtsAway','—'); }
+
+  // Injuries + Stats (via Edge: /research)
+  bbShow('bbInjuryLoading', true);
+  bbShow('bbInjuryEmpty', false);
+  const list = document.getElementById('bbInjuryList'); if (list) list.innerHTML = '';
+
+  let injuries = [], stats = {};
+  try {
+    const inj = await sbGetInjuries({ season: window.CONFIG.SEASON, team });
+    injuries = inj?.items || inj || [];
+  } catch(e){ console.error('injuries', e); }
+  try {
+    const st = await sbGetTeamStats({ season: window.CONFIG.SEASON, team });
+    stats = st?.stats || st || {};
+  } catch(e){ console.error('team stats', e); }
+
+  // Render injuries
+  bbShow('bbInjuryLoading', false);
+  if (!injuries || injuries.length===0) {
+    bbShow('bbInjuryEmpty', true);
+  } else if (list) {
+    injuries.slice(0,12).forEach(it=>{
+      const row = document.createElement('div');
+      row.className = 'bb-row';
+      row.innerHTML = `<span class="l">${it.player}${it.pos?' ('+it.pos+')':''}</span><span class="r">${it.status}${it.impact? ' · '+it.impact : ''}</span>`;
+      list.appendChild(row);
+      if (it.note) {
+        const sub = document.createElement('div');
+        sub.style.opacity='.8'; sub.style.fontSize='12px'; sub.style.margin='2px 0 6px';
+        sub.textContent = it.note;
+        list.appendChild(sub);
+      }
+    });
+  }
+
+  // Render efficiency
+  bbSetText('bbOffPpg',    (stats.off_ppg    != null) ? String(stats.off_ppg)    : '—');
+  bbSetText('bbDefPapg',   (stats.def_papg   != null) ? String(stats.def_papg)   : '—');
+  bbSetText('bbOffYdsPg',  (stats.off_yds_pg != null) ? String(stats.off_yds_pg) : '—');
+  bbSetText('bbDefYdsPg',  (stats.def_yds_pg != null) ? String(stats.def_yds_pg) : '—');
+  bbSetText('bbPassOffRank', (stats.pass_off_rank != null) ? String(stats.pass_off_rank) : '—');
+  bbSetText('bbPassDefRank', (stats.pass_def_rank != null) ? String(stats.pass_def_rank) : '—');
+  bbSetText('bbRushOffRank', (stats.rush_off_rank != null) ? String(stats.rush_off_rank) : '—');
+  bbSetText('bbRushDefRank', (stats.rush_def_rank != null) ? String(stats.rush_def_rank) : '—');
+}
+
+// Close handlers
+(function(){
+  const closeBtn = document.getElementById('bbResearchClose');
+  if (closeBtn) closeBtn.addEventListener('click', ()=>{ const bd=document.getElementById('researchBackdrop'); if (bd) bd.style.display='none'; });
+  document.addEventListener('keydown', (e)=>{ if (e.key==='Escape'){ const bd=document.getElementById('researchBackdrop'); if (bd) bd.style.display='none'; }});
+  const bd = document.getElementById('researchBackdrop');
+  if (bd) bd.addEventListener('click', (e)=>{ if (e.target===bd) bd.style.display='none'; });
+})();
+// BB:RESEARCH:SCRIPT_END
+</script>
 
 document.addEventListener('DOMContentLoaded', init);
 </script>

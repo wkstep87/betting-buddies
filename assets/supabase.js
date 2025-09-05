@@ -264,6 +264,38 @@ function computeAts(games, picks, users) {
 
   return { perUser: u, finalizedWeeks };
 }
+// BB:SB:TEAM_ATS_START
+async function sbComputeTeamAts(team) {
+  const t = String(team || '').toLowerCase();
+  const { data, error } = await sb
+    .from('games')
+    .select('home, away, winner_ats, final')
+    .eq('season', SEASON)
+    .eq('final', true)
+    .or(`home.eq.${team},away.eq.${team}`);
+  if (error) throw error;
+
+  const res = {
+    overall: { w:0, l:0, p:0 },
+    home:    { w:0, l:0, p:0 },
+    away:    { w:0, l:0, p:0 }
+  };
+
+  (data || []).forEach(g => {
+    const isHome = String(g.home||'').toLowerCase() === t;
+    const isAway = String(g.away||'').toLowerCase() === t;
+    if (!isHome && !isAway) return;
+    const side = isHome ? 'HOME' : 'AWAY';
+    const bucket = isHome ? res.home : res.away;
+
+    if (g.winner_ats === 'PUSH') { res.overall.p++; bucket.p++; }
+    else if (g.winner_ats === side) { res.overall.w++; bucket.w++; }
+    else { res.overall.l++; bucket.l++; }
+  });
+
+  return res;
+}
+// BB:SB:TEAM_ATS_END
 
 /* =========================
    Bankroll
@@ -505,6 +537,7 @@ Object.assign(window, {
   sbFreezeWeek,
   sbPullScoresNow,
   sbGetInjuries,
+  sbComputeTeamAts,
   sbGetTeamStats,
   sbGetCurrentWeek,
   sbSetCurrentWeek,

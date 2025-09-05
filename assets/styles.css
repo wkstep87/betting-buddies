@@ -1168,7 +1168,7 @@ header { text-align: initial; } /* stomp any accidental centering */
 
   /* Column widths (adjust to taste) */
   #picks-table th:nth-child(1), #picks-table td:nth-child(1) { width: 36%; } /* Matchup */
-  #picks-table th:nth-child(2), #picks-table td:nth-child(2) { width: 22%; } /* Spread */
+  #picks-table th:nth-child(2), #picks-table td:nth-child(2) { width: 24%; } /* Spread */
   #picks-table th:nth-child(3), #picks-table td:nth-child(3) { width: 20%; } /* Your Pick */
   #picks-table th:nth-child(4), #picks-table td:nth-child(4) { width: 22%; } /* Confidence */
 
@@ -1203,8 +1203,8 @@ header { text-align: initial; } /* stomp any accidental centering */
   #picks-table { table-layout: fixed; width: 100%; }
 
   /* Tune these numbers as you like */
-  #picks-table th:nth-child(1), #picks-table td:nth-child(1) { width: 46%; } /* Matchup */
-  #picks-table th:nth-child(2), #picks-table td:nth-child(2) { width: 14%; } /* Spread */
+  #picks-table th:nth-child(1), #picks-table td:nth-child(1) { width: 40%; } /* Matchup */
+  #picks-table th:nth-child(2), #picks-table td:nth-child(2) { width: 20%; } /* Spread */
   #picks-table th:nth-child(3), #picks-table td:nth-child(3) { width: 20%; } /* Your Pick */
   #picks-table th:nth-child(4), #picks-table td:nth-child(4) { width: 20%; text-align:center; } /* Confidence */
   #picks-table td:nth-child(4) select.conf { text-align-last: center; }
