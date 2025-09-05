@@ -57,13 +57,6 @@
       <div>
         <label>Week:
           <select id="week-select" class="select"></select>
-		<label style="margin-left:12px;">
- 		 Sort:
-  		<select id="sortMode" class="select">
-    		<option value="time" selected>Kickoff Time</option>
-    		<option value="conf">Confidence</option>
-  		</select>
-		</label>
         </label>
       </div>
 
@@ -313,15 +306,12 @@
 
     const confPool = localConfValuesForGames(games.length);
 
-    let rowIndex = 0;
     games.forEach(g => {
       const tr = document.createElement('tr');
-	tr.dataset.originalIndex = String(rowIndex++);
-	tr.dataset.commence = String(new Date(g.commence_time).getTime() || 0);
-	tr.setAttribute('data-game-id', g.id);
-	tr.setAttribute('data-home', g.home);
-	tr.setAttribute('data-away', g.away);
-	tr.setAttribute('data-spread', (g.spread ?? '').toString());
+      tr.setAttribute('data-game-id', g.id);
+      tr.setAttribute('data-home', g.home);
+      tr.setAttribute('data-away', g.away);
+      tr.setAttribute('data-spread', (g.spread ?? '').toString());
 
       // Matchup cell
       const tdM = document.createElement('td');
@@ -474,9 +464,6 @@
             game_final: prev.game_final ?? g.final ?? false,
             game_winner_ats: prev.game_winner_ats ?? g.winner_ats ?? null
           };
-const sortSel = document.getElementById('sortMode');
-if (sortSel) applyPickSort(sortSel.value || 'time');
-
 
           updatePartialBanner();
           updatePickTint();
@@ -612,64 +599,6 @@ if (sortSel) applyPickSort(sortSel.value || 'time');
     el.style.display = 'none';
     el.textContent = '';
   }
-</script>
-<script>
-// Apply sort order to the currently rendered table
-function applyPickSort(mode) {
-  const tbody = document.querySelector('#picks-body'); // correct tbody
-  if (!tbody) return;
-
-  const rows = Array.from(tbody.querySelectorAll('tr'));
-
-  function getConf(tr) {
-    const sel = tr.querySelector('select.conf'); // correct class
-    if (!sel) return -Infinity;
-    const v = parseInt(sel.value, 10);
-    return Number.isFinite(v) ? v : -Infinity;
-  }
-  function getTime(tr) {
-    const t = parseInt(tr.dataset.commence || '0', 10);
-    return Number.isFinite(t) ? t : 0;
-  }
-  function getOrig(tr) {
-    const i = parseInt(tr.dataset.originalIndex || '0', 10);
-    return Number.isFinite(i) ? i : 0;
-  }
-
-  if (mode === 'conf') {
-    rows.sort((a, b) => {
-      const ca = getConf(a), cb = getConf(b);
-      if (cb !== ca) return cb - ca;      // DESC by confidence
-      const ta = getTime(a), tb = getTime(b);
-      if (ta !== tb) return ta - tb;      // tie → earlier kickoff
-      return getOrig(a) - getOrig(b);
-    });
-  } else {
-    rows.sort((a, b) => {
-      const ta = getTime(a), tb = getTime(b);
-      if (ta !== tb) return ta - tb;      // ASC by commence
-      return getOrig(a) - getOrig(b);
-    });
-  }
-
-  for (const tr of rows) tbody.appendChild(tr);
-}
-
-// Wire dropdown
-document.addEventListener('DOMContentLoaded', () => {
-  const sortSel = document.getElementById('sortMode');
-  if (sortSel) sortSel.addEventListener('change', () => applyPickSort(sortSel.value));
-});
-
-// Re-apply when a confidence changes and sort is 'conf'
-document.addEventListener('change', (ev) => {
-  if (ev.target && ev.target.matches('select.conf')) {
-    const sortSel = document.getElementById('sortMode');
-    if (sortSel && sortSel.value === 'conf') applyPickSort('conf');
-  }
-});
-</script>
-
   function openConfirmModal(){ document.getElementById('confirmModal').style.display='block'; }
   function closeConfirmModal(){ document.getElementById('confirmModal').style.display='none'; }
   function getWeekNumber(){ const el=document.getElementById('week-select'); return el?Number(el.value):NaN; }
