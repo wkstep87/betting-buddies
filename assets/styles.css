@@ -1301,3 +1301,13 @@ header { text-align: initial; } /* stomp any accidental centering */
 /* Override: bigger header logo */
 .brand-logo { height: 100px !important; }
 
+.filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  align-items: center;
+}
+.filters .user { grid-column: 1; }
+.filters .week { grid-column: 2; justify-self: end; }
+.filters .sort { grid-column: 2; justify-self: end; }
+

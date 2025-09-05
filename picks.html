@@ -61,21 +61,24 @@
 
 <main>
   <div class="card">
-    <div class="toolbar">
-      <label>User:
-        <input id="username" type="text" style="width:120px" readonly />
-      </label>
+<div class="toolbar">
+  <div class="filters">
+    <label class="user">User:
+      <input id="username" type="text" style="width:120px" readonly />
+    </label>
 
-      <label>Week:
-        <select id="week-select" class="select"></select>
-      </label>
+    <label class="week">Week:
+      <select id="week-select" class="select"></select>
+    </label>
 
-      <label>Sort:
-        <select id="sortMode" class="select">
-          <option value="time" selected>Kickoff Time</option>
-          <option value="conf">Confidence</option>
-        </select>
-      </label>
+    <label class="sort">Sort:
+      <select id="sortMode" class="select">
+        <option value="time" selected>Kickoff Time</option>
+        <option value="conf">Confidence</option>
+      </select>
+    </label>
+  </div>
+
 
       <!-- Admin controls (shown only for Will) -->
       <div style="margin-left:auto; display:flex; gap:8px; flex-wrap:wrap;">
