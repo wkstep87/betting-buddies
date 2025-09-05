@@ -665,7 +665,7 @@ async function init(){
   initSaveFlow();
   await render();
 }
-<script>
+
 // BB:RESEARCH:SCRIPT_START
 function bbSplitCityNick(full){
   const parts = String(full||'').trim().split(/\s+/);
@@ -758,7 +758,7 @@ async function openTeamResearch({ team, opponent, week, game }) {
   if (bd) bd.addEventListener('click', (e)=>{ if (e.target===bd) bd.style.display='none'; });
 })();
 // BB:RESEARCH:SCRIPT_END
-</script>
+
 
 document.addEventListener('DOMContentLoaded', init);
 </script>
