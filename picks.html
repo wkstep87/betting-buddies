@@ -1,28 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <link rel="manifest" href="/site.webmanifest">
-  <link rel="icon" href="/favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" href="/assets/icons/favicon-32.png" sizes="32x32">
-  <link rel="icon" type="image/png" href="/assets/icons/favicon-16.png" sizes="16x16">
-  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon-180.png" sizes="180x180">
-  <meta name="theme-color" content="#0B1220">
-
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Picks · Betting Buddies</title>
-  
-  <link rel="stylesheet" href="assets/styles.css"/>
 
-  <!-- Libraries & project config (order matters) -->
+  <!-- Icons / PWA (safe if present; harmless if missing locally) -->
+  <link rel="manifest" href="/site.webmanifest" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" href="/assets/icons/favicon-32.png" sizes="32x32" />
+  <link rel="icon" type="image/png" href="/assets/icons/favicon-16.png" sizes="16x16" />
+  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon-180.png" sizes="180x180" />
+  <meta name="theme-color" content="#0B1220" />
+
+  <link rel="stylesheet" href="assets/styles.css" />
+
+  <!-- Order matters: lib -> config -> helpers -> page -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
   <script src="assets/config.js"></script>
   <script src="assets/supabase.js"></script>
   <script src="assets/common.js"></script>
 
   <style>
-    .kickoff-tag { opacity:.8; font-size:12px; margin-bottom:4px; }
-    @media (max-width:768px){ .hide-mobile{ display:none!important; } }
+    .kickoff-tag{opacity:.8;font-size:12px;margin-bottom:4px}
+    @media (max-width:768px){.hide-mobile{display:none!important}}
+    .toolbar { display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+    .toolbar label { font-weight:500; }
+    .toolbar .select { min-width:110px; }
+    .brand-logo { height:22px; }
+    .matchup-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center}
+    .matchup-away,.matchup-home{display:flex;align-items:center;gap:6px}
+    .bb-logo-btn{background:transparent;border:0;padding:0;display:inline-flex;align-items:center;cursor:pointer}
+    .bb-logo-btn img{width:22px;height:22px;border-radius:50%;object-fit:contain;background:#0a0a0a}
+    .pick-select.status-won{background:#0a3320;border-color:#1e7f4d}
+    .pick-select.status-lost{background:#381a1a;border-color:#a33}
+    .pick-select.status-push{background:#2e2e2e;border-color:#777}
+    .badge.frozen{background:#0b2a46;border:1px solid #3477ad}
+    .partial-note{background:#2b1f00;border:1px solid #7a5b00;padding:8px;border-radius:6px}
+    .nav .badge { margin-left:auto }
   </style>
 </head>
 
@@ -34,13 +49,12 @@
     </div>
 
     <nav class="nav-links">
-      <a href="picks.html">Picks</a>
+      <a href="picks.html" aria-current="page">Picks</a>
       <a href="group.html">Group</a>
       <a href="standings.html">Standings</a>
       <a href="bankroll.html">Bankroll</a>
     </nav>
 
-    <div class="spacer"></div>
     <span class="badge">Season 2025</span>
   </div>
 </header>
@@ -48,29 +62,36 @@
 <main>
   <div class="card">
     <div class="toolbar">
-      <div>
-        <label>User:
-          <input id="username" type="text" style="width:80px" readonly />
-        </label>
-      </div>
+  <div class="filters">
+    <label class="user">User:
+      <input id="username" type="text" style="width:120px" readonly />
+    </label>
 
-      <div>
-        <label>Week:
-          <select id="week-select" class="select"></select>
-        </label>
-      </div>
+    <label class="week">Week:
+      <select id="week-select" class="select"></select>
+    </label>
 
-      <div class="lock">
+    <label class="sort">Sort:
+      <select id="sortMode" class="select">
+        <option value="time" selected>Kickoff Time</option>
+        <option value="conf">Confidence</option>
+      </select>
+    </label>
+  </div>
+
+
+      <!-- Admin controls (shown only for Will) -->
+      <div style="margin-left:auto; display:flex; gap:8px; flex-wrap:wrap;">
         <button class="btn admin" id="btn-pull-scores"  style="display:none" title="Pull latest scores and re-grade now">🔄 Pull Scores</button>
-        <button class="btn admin" id="btn-default-week" style="display:none" title="Set CURRENT week as the season default">⭐ Default Week</button>
-        <button class="btn admin" id="btn-freeze-week"  style="display:none" title="Freeze all current lines for this week">❄️ Freeze Week</button>
-        <button class="btn admin" id="btn-lock"        style="display:none" title="Lock this week so no picks can be edited">🔒 Lock Week</button>
-        <button class="btn admin" id="btn-unlock"      style="display:none" title="Unlock this week to allow edits">🔓 Unlock Week</button>
+        <button class="btn admin" id="btn-default-week" style="display:none" title="Set CURRENT week as default">⭐ Default Week</button>
+        <button class="btn admin" id="btn-freeze-week"  style="display:none" title="Freeze all lines for this week">❄️ Freeze Week</button>
+        <button class="btn admin" id="btn-lock"        style="display:none" title="Lock this week">🔒 Lock Week</button>
+        <button class="btn admin" id="btn-unlock"      style="display:none" title="Unlock this week">🔓 Unlock Week</button>
       </div>
     </div>
 
     <div class="table-wrap">
-      <table id="picks-table" class="table picks">
+      <table class="table picks">
         <thead>
           <tr>
             <th>Matchup</th>
@@ -83,16 +104,12 @@
       </table>
     </div>
 
-    <!-- Partial progress banner -->
     <div id="partialWarning" class="partial-note" style="display:none; margin:10px 0;">
       Your slate is partially complete. <span id="partialCount"></span>
     </div>
 
-    <!-- Footer bar with Save on the right -->
-    <div id="footer-bar" style="display:flex; justify-content:space-between; align-items:center; margin-top:20px;">
-      <div id="footer-note">
-        Confidence starts at 16 and descends; lowest numbers removed if fewer games.
-      </div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px;">
+      <div>Confidence starts at 16 and descends; lowest numbers removed if fewer games.</div>
       <div>
         <button id="savePicksBtn" class="btn btn-primary">Save Picks</button>
         <span id="saveStatus" style="margin-left:10px; display:none;"></span>
@@ -104,10 +121,10 @@
 <div class="toast"></div>
 
 <!-- Confirm Modal -->
-<div id="confirmModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000;">
+<div id="confirmModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1000;">
   <div style="max-width:640px; margin:80px auto; background:#111; color:#eee; border-radius:8px; padding:16px;">
     <h3 style="margin:0 0 10px;">Confirm Picks — Top 5 by Confidence</h3>
-    <div id="confirmSummary" style="font-size:14px; opacity:0.9; margin-bottom:10px;"></div>
+    <div id="confirmSummary" style="font-size:14px; opacity:.9; margin-bottom:10px;"></div>
     <div id="top5List" style="border:1px solid #333; border-radius:6px; padding:8px; max-height:300px; overflow:auto;"></div>
     <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:12px;">
       <button id="cancelConfirmBtn" class="btn">Cancel</button>
@@ -116,7 +133,7 @@
   </div>
 </div>
 
-<!-- Research modal UI -->
+<!-- Research modal (Phase 1 UI kept) -->
 <style>
   #researchBackdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1100}
   .bb-modal{max-width:800px;margin:64px auto;background:#111;color:#eee;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.55);overflow:hidden}
@@ -137,7 +154,6 @@
     .bb-modal{position:fixed;top:0;left:0;margin:0;max-width:560px;width:calc(100vw - 12px);box-sizing:border-box}
     .bb-grid{grid-template-columns:1fr}
   }
-  .bb-logo-btn{background:transparent;border:none;padding:0;margin:0;display:inline-flex;align-items:center;cursor:pointer}
 </style>
 <div id="researchBackdrop">
   <div class="bb-modal">
@@ -151,35 +167,6 @@
     </header>
     <div class="body">
       <div style="opacity:.9;margin-bottom:8px">Week <span id="bbWeek"></span></div>
-      <div class="bb-grid">
-        <div class="bb-card">
-          <h4>ATS Snapshot</h4>
-          <div class="bb-row"><span class="l">Overall ATS</span><span class="r" id="bbATSOverall">—</span></div>
-          <div class="bb-row"><span class="l">Home ATS</span><span class="r" id="bbATSHome">—</span></div>
-          <div class="bb-row"><span class="l">Away ATS</span><span class="r" id="bbATSAway">—</span></div>
-        </div>
-        <div class="bb-card">
-          <h4>Offense / Defense</h4>
-          <div class="bb-row"><span class="l">Points For (PPG)</span><span class="r" id="bbPPG">—</span></div>
-          <div class="bb-row"><span class="l">Points Against (PAPG)</span><span class="r" id="bbPAPG">—</span></div>
-          <div class="bb-row"><span class="l">Last 3 (PF / PA)</span><span class="r" id="bbLast3">—</span></div>
-        </div>
-      </div>
-      <div class="bb-grid" style="margin-top:12px">
-        <div class="bb-card">
-          <h4>Key Injuries</h4>
-          <div id="bbInjuries" class="muted">—</div>
-        </div>
-        <div class="bb-card">
-          <h4>Team Stats (per-game)</h4>
-          <div class="bb-row"><span class="l">Total Yards (Off)</span><span class="r" id="bbYdsOff">—</span></div>
-          <div class="bb-row"><span class="l">Total Yards (Def)</span><span class="r" id="bbYdsDef">—</span></div>
-          <div class="bb-row"><span class="l">Yards/Play (Off)</span><span class="r" id="bbYPP">—</span></div>
-          <div class="bb-row"><span class="l">3rd-Down %</span><span class="r" id="bbThird">—</span></div>
-          <div class="bb-row"><span class="l">Red-Zone TD %</span><span class="r" id="bbRZ">—</span></div>
-        </div>
-      </div>
-
       <div class="bb-card" style="margin-top:12px">
         <h4>This Week</h4>
         <div class="bb-row"><span class="l">Opponent</span><span class="r" id="bbOpponent">—</span></div>
@@ -190,711 +177,466 @@
   </div>
 </div>
 
-<!-- Page logic -->
 <script>
-  // -----------------------
-  // Page state & helpers
-  // -----------------------
-  let CURRENT_WEEK = 1;
-  let locked = false;
-  let games = [];
-  let myPicks = {};               // { [gameId]: { team, confidence, ... } }
-  let usedConfidence = new Set(); // Set<number>
+/* -------------------------------------------------------------
+   Page state
+------------------------------------------------------------- */
+let CURRENT_WEEK = 1;
+let locked = false;
+let games = [];
+let myPicks = {};               // { [gameId]: { team, confidence, ... } }
+let usedConfidence = new Set(); // Set<number>
+const IS_MOBILE = window.matchMedia('(max-width: 768px)');
 
-  // local fallback for confidence values (16 descending for N games)
-  function localConfValuesForGames(n) {
-    return Array.from({ length: n }, (_, i) => 16 - i);
+/* -------------------------------------------------------------
+   Helpers
+------------------------------------------------------------- */
+function setUsername(u){
+  USERNAME = (u && u.trim()) || '';
+  localStorage.setItem('username', USERNAME);
+  const box = document.getElementById('username');
+  if (box) box.value = USERNAME;
+
+  const isAdmin = (USERNAME === 'Will');
+  document.getElementById('btn-lock').style.display         = isAdmin ? 'inline-block' : 'none';
+  document.getElementById('btn-unlock').style.display       = isAdmin ? 'inline-block' : 'none';
+  document.getElementById('btn-freeze-week').style.display  = isAdmin ? 'inline-block' : 'none';
+  document.getElementById('btn-default-week').style.display = isAdmin ? 'inline-block' : 'none';
+  document.getElementById('btn-pull-scores').style.display  = isAdmin ? 'inline-block' : 'none';
+}
+
+function confPoolFor(n){
+  // 16 descending; truncated by number of games
+  return Array.from({length:n},(_,i)=>16-i);
+}
+
+function kickoffText(ts){
+  if(!ts) return '';
+  const dt = new Date(ts);
+  return dt.toLocaleString('en-US',{weekday:'short',hour:'numeric',minute:'2-digit'});
+}
+
+function updatePartialBanner(){
+  const rows = Array.from(document.querySelectorAll('tr[data-game-id]'));
+  const done = rows.filter(r=>{
+    const teamSel = r.querySelector('select.team-select');
+    const confSel = r.querySelector('select.conf-select');
+    return (teamSel?.value || confSel?.value);
+  }).length;
+  const total = rows.length;
+  const started = rows.filter(r=>{
+    const teamSel = r.querySelector('select.team-select');
+    const confSel = r.querySelector('select.conf-select');
+    return (teamSel?.value || confSel?.value);
+  }).length;
+
+  const el = document.getElementById('partialWarning');
+  const label = document.getElementById('partialCount');
+  const complete = Object.values(myPicks).filter(p => p.team || p.confidence != null).length;
+
+  if (complete>0 && complete<total){
+    el.style.display='block';
+    if(label) label.textContent = `${complete} of ${total} selections started`;
+  } else {
+    el.style.display='none';
+  }
+}
+
+function applyLabelMode(sel, mode){ // 'full' | 'abbr'
+  Array.from(sel.options).forEach(opt=>{
+    const full = opt.dataset.full || opt.textContent;
+    const abbr = opt.dataset.abbr || full;
+    opt.textContent = (mode==='abbr') ? abbr : full;
+  });
+}
+
+/* -------------------------------------------------------------
+   Save flow
+------------------------------------------------------------- */
+function buildTop5(){
+  const rows = Array.from(document.querySelectorAll('tr[data-game-id]'));
+  const selections = rows.map(r=>{
+    const game_id = Number(r.dataset.gameId || r.getAttribute('data-game-id'));
+    const home = r.getAttribute('data-home');
+    const away = r.getAttribute('data-away');
+    const spreadRaw = r.getAttribute('data-spread');
+    const spread = (spreadRaw!==null && spreadRaw!=='' && !Number.isNaN(Number(spreadRaw))) ? Number(spreadRaw) : null;
+
+    const teamEl = r.querySelector('select.team-select');
+    const team = (teamEl && teamEl.value) ? teamEl.value : null;
+
+    const confEl = r.querySelector('select.conf-select');
+    const confStr = confEl ? confEl.value : '';
+    const confidence = confStr === '' ? null : Number(confStr);
+
+    return { game_id, home, away, spread, team, confidence };
+  });
+
+  // top 5 by confidence (nulls go last)
+  const sorted = selections
+    .slice()
+    .sort((a,b)=>{
+      const ac = a.confidence ?? -Infinity;
+      const bc = b.confidence ?? -Infinity;
+      return bc - ac;
+    })
+    .slice(0, Math.min(5, selections.length));
+
+  return { selections, top5: sorted };
+}
+
+function renderTop5Dialog(){
+  const { selections, top5 } = buildTop5();
+  const summary = document.getElementById('confirmSummary');
+  if(summary){
+    const week = CURRENT_WEEK;
+    const complete = selections.filter(s => (s.team || s.confidence!=null)).length;
+    const total = selections.length;
+    const started = selections.filter(s => (s.team || s.confidence!=null)).length;
+    summary.innerHTML =
+`Week: ${week}<br/>
+Progress: ${complete}/${total} complete (${started} started)<br/>
+Previewing: Top 5 of your completed picks`;
   }
 
-  function setUsername(u) {
-    USERNAME = (u && u.trim()) || '';
-    localStorage.setItem('username', USERNAME);
-    const box = document.getElementById('username');
-    if (box) box.value = USERNAME;
+  const list = document.getElementById('top5List');
+  list.innerHTML='';
+  top5.forEach(item=>{
+    const opponent = item.team === item.home ? item.away : item.home;
+    const vsAt = item.team === item.home ? 'vs' : '@';
+    const spreadTxt = (item.spread==null) ? ' ' : ` · Spread: ${item.spread>0 ? '+'+item.spread : item.spread}`;
+    const row = document.createElement('div');
+    row.style.padding='8px';
+    row.style.borderBottom='1px solid #222';
+    row.innerHTML = `
+      <div><strong>${item.team || '(no team yet)'}</strong> ${vsAt} ${opponent}${spreadTxt}</div>
+      <div style="opacity:.9">Confidence: ${item.confidence ?? '—'}</div>`;
+    list.appendChild(row);
+  });
+}
 
-    // Show admin controls only if it's you
-    const isAdmin = (USERNAME === 'Will');
-    document.getElementById('btn-lock').style.display         = isAdmin ? 'inline-block' : 'none';
-    document.getElementById('btn-unlock').style.display       = isAdmin ? 'inline-block' : 'none';
-    document.getElementById('btn-freeze-week').style.display  = isAdmin ? 'inline-block' : 'none';
-    document.getElementById('btn-default-week').style.display = isAdmin ? 'inline-block' : 'none';
-    document.getElementById('btn-pull-scores').style.display  = isAdmin ? 'inline-block' : 'none';
-  }
+function openConfirmModal(){
+  renderTop5Dialog();
+  document.getElementById('confirmModal').style.display='block';
+}
+function closeConfirmModal(){
+  document.getElementById('confirmModal').style.display='none';
+}
 
-  // Mobile breakpoint helper
-  const IS_MOBILE = window.matchMedia('(max-width: 768px)');
+async function doSave(){
+  // Persist only rows that have either a team OR a confidence set.
+  const rows = Array.from(document.querySelectorAll('tr[data-game-id]'));
+  const week = CURRENT_WEEK;
+  const username = localStorage.getItem('username') || window.CONFIG.USERNAME || '';
+  const season = window.CONFIG.SEASON_NUMBER || 2025;
 
-  // Switch option labels between full and abbr
-  function applyLabelMode(sel, mode /* 'full' | 'abbr' */) {
-    Array.from(sel.options).forEach(opt => {
-      const full = opt.dataset.full || opt.textContent;
-      const abbr = opt.dataset.abbr || full;
-      opt.textContent = (mode === 'abbr') ? abbr : full;
-    });
-  }
-
-  // -----------------------
-  // Init & render
-  // -----------------------
-  async function init() {
-    // username (resolve via token or localStorage)
-    const qs = new URLSearchParams(location.search);
-    const token = qs.get('t');
-    if (token) {
-      try {
-        const res = await sbResolveLink(token);
-        if (res?.username) {
-          setUsername(res.username);
-          localStorage.setItem('username', res.username);
-          history.replaceState({}, '', location.pathname); // strip ?t=...
-        }
-      } catch (e) { console.error('resolve-link failed', e); }
-    }
-    if (!USERNAME) {
-      const u = localStorage.getItem('username') || window.CONFIG.USERNAME || '';
-      if (u) setUsername(u);
-    }
-
-    // week select
-    const weeks = await sbLoadWeeks();
-    const sel = document.getElementById('week-select');
-    sel.innerHTML = '';
-    weeks.forEach(w => {
-      const o = document.createElement('option');
-      o.value = w.week; o.textContent = 'Week ' + w.week;
-      sel.appendChild(o);
-    });
-    const maybeDefault = await sbGetCurrentWeek().catch(() => null);
-    const candidate = Number(maybeDefault);
-    CURRENT_WEEK = (Number.isFinite(candidate) && weeks.some(w => Number(w.week) === candidate))
-      ? candidate
-      : (weeks[0]?.week || 1);
-    sel.value = CURRENT_WEEK;
-
-    sel.onchange = () => { CURRENT_WEEK = Number(sel.value); render(); };
-    document.getElementById('btn-lock').onclick        = async () => { await adminLock(CURRENT_WEEK, 'lock');   await render(); };
-    document.getElementById('btn-unlock').onclick      = async () => { await adminLock(CURRENT_WEEK, 'unlock'); await render(); };
-    document.getElementById('btn-freeze-week').onclick = async () => { await sbFreezeWeek(CURRENT_WEEK);        await render(); };
-    document.getElementById('btn-default-week').onclick= async () => {
-      try { await sbSetCurrentWeek(CURRENT_WEEK); if (typeof showToast==='function') showToast(`Default week set to ${CURRENT_WEEK}`); }
-      catch(e){ console.error('Set default week failed', e); }
-    };
-    document.getElementById('btn-pull-scores').onclick = async () => {
-      try { const res = await sbPullScoresNow(CURRENT_WEEK); if (typeof showToast==='function') showToast(res?.message || 'Scores pulled.'); await render(); }
-      catch(e){ console.error('Pull scores failed', e); if (typeof showToast==='function') showToast('Pull scores failed.'); }
-    };
-
-    await render();
-    updatePartialBanner();
-    initSaveFlow(); // wire Save/Confirm after initial render
-  }
-
-  async function render() {
-    locked  = await sbLoadWeekLock(CURRENT_WEEK);
-    games   = await sbLoadGames(CURRENT_WEEK);
-    myPicks = await sbLoadMyPicks(CURRENT_WEEK);
-
-    // seed usedConfidence from existing picks
-    usedConfidence = new Set(
-      Object.values(myPicks)
-        .map(p => (p.confidence != null ? Number(p.confidence) : undefined))
-        .filter(Boolean)
-    );
-
-    const tbody = document.getElementById('picks-body');
-    tbody.innerHTML = '';
-
-    const confPool = localConfValuesForGames(games.length);
-
-    games.forEach(g => {
-      const tr = document.createElement('tr');
-      tr.setAttribute('data-game-id', g.id);
-      tr.setAttribute('data-home', g.home);
-      tr.setAttribute('data-away', g.away);
-      tr.setAttribute('data-spread', (g.spread ?? '').toString());
-
-      // Matchup cell
-      const tdM = document.createElement('td');
-
-      // Desktop-only kickoff sublabel
-      const koLabel = document.createElement('div');
-      koLabel.className = 'kickoff-tag hide-mobile';
-      if (g.commence_time) {
-        const dt = new Date(g.commence_time);
-        koLabel.textContent = dt.toLocaleString('en-US', { weekday:'short', hour:'numeric', minute:'2-digit' });
-      } else koLabel.textContent = '';
-      tdM.appendChild(koLabel);
-
-      const row = document.createElement('div');
-      row.className = 'row-team matchup-grid';
-
-      const awayDiv = document.createElement('div'); awayDiv.className = 'matchup-away';
-      const awayName = document.createElement('span'); awayName.className = 'team-name'; awayName.textContent = g.away + ' ';
-      awayDiv.appendChild(awayName);
-      const awayBtn = document.createElement('button'); awayBtn.type='button'; awayBtn.className='bb-logo-btn';
-      const awayLogo = makeTeamLogoOnly(g.away); awayBtn.appendChild(awayLogo);
-      awayBtn.addEventListener('click',()=>window.openTeamResearch({team:g.away,opponent:g.home,week:CURRENT_WEEK,game:g}));
-      awayDiv.appendChild(awayBtn);
-
-      const at = document.createElement('div'); at.textContent='@'; at.style.textAlign='center';
-
-      const homeDiv = document.createElement('div'); homeDiv.className = 'matchup-home';
-      const homeBtn = document.createElement('button'); homeBtn.type='button'; homeBtn.className='bb-logo-btn';
-      const homeLogo = makeTeamLogoOnly(g.home); homeBtn.appendChild(homeLogo);
-      homeBtn.addEventListener('click',()=>window.openTeamResearch({team:g.home,opponent:g.away,week:CURRENT_WEEK,game:g}));
-      const homeName = document.createElement('span'); homeName.className = 'team-name'; homeName.textContent = ' ' + g.home;
-      homeDiv.appendChild(homeBtn); homeDiv.appendChild(homeName);
-
-      row.appendChild(awayDiv); row.appendChild(at); row.appendChild(homeDiv);
-      tdM.appendChild(row);
-
-      // Spread cell (prefer frozen)
-      const tdS = document.createElement('td');
-      const line = (g.spread_frozen ?? g.spread);
-      let spreadTxt = '';
-      if (line != null && line !== '') {
-        const s = Number(line);
-        spreadTxt = (s > 0 ? '+' + s : String(s));
-      }
-      const isFrozen = !!g.spread_is_frozen;
-      const badge = document.createElement('span');
-      badge.className = 'badge' + (isFrozen ? ' frozen' : '');
-      badge.textContent = `DK ${spreadTxt}`;
-      tdS.appendChild(badge);
-
-      // Admin-only: click badge to freeze this game
-      if (USERNAME === 'Will' && !isFrozen) {
-        badge.style.cursor = 'pointer';
-        badge.title = 'Click to freeze this line';
-        badge.onclick = async () => {
-          try { await sbFreezeGame(g.id); await render(); }
-          catch(e){ console.error('Freeze failed', e); if (typeof showToast==='function') showToast('Freeze failed'); }
-        };
-      }
-
-      // Your Pick cell
-      const tdP = document.createElement('td');
-      const selTeam = document.createElement('select');
-      selTeam.className = 'select team-select pick-select';
-
-      const phOpt = document.createElement('option');
-      phOpt.value = ''; phOpt.textContent = '—';
-      selTeam.appendChild(phOpt);
-
-      [g.away, g.home].forEach(fullName => {
-        const abbr = TEAM_LOGOS[fullName] || fullName.slice(0,3).toUpperCase();
-        const o = document.createElement('option');
-        o.value = fullName;
-        o.dataset.full = fullName;
-        o.dataset.abbr = abbr;
-        o.textContent = IS_MOBILE.matches ? abbr : fullName;
-        selTeam.appendChild(o);
-      });
-
-      selTeam.value = myPicks[g.id]?.team || '';
-      selTeam.disabled = locked;
-
-      selTeam.addEventListener('focus', () => {
-        Array.from(selTeam.options).forEach(opt => {
-          if (opt.dataset.full) opt.textContent = opt.dataset.full;
-        });
-      });
-      selTeam.addEventListener('blur', () => {
-        Array.from(selTeam.options).forEach(opt => {
-          if (opt.dataset.abbr && IS_MOBILE.matches) opt.textContent = opt.dataset.abbr;
-          else if (opt.dataset.full) opt.textContent = opt.dataset.full;
-        });
-      });
-
-      function updatePickTint() {
-        selTeam.classList.remove('status-won','status-push','status-lost');
-
-        const mp = myPicks[g.id] || {};
-        const team = (mp.team ?? selTeam.value ?? '').toString();
-        if (!team) return;
-
-        const gameFinal = mp.game_final === true;
-        const winnerATS = mp.game_winner_ats;
-
-        if (gameFinal && winnerATS) {
-          const isHome = team.toLowerCase() === g.home.toLowerCase();
-          const isAway = team.toLowerCase() === g.away.toLowerCase();
-          const pickSide = isHome ? 'HOME' : (isAway ? 'AWAY' : 'UNKNOWN');
-
-          if (winnerATS === 'PUSH') selTeam.classList.add('status-push');
-          else if (pickSide === winnerATS) selTeam.classList.add('status-won');
-          else selTeam.classList.add('status-lost');
-          return;
-        }
-
-        if (g.home_score == null || g.away_score == null) return;
-
-        const hs = Number(g.home_score);
-        const as = Number(g.away_score);
-        const ln = Number((g.spread_frozen ?? g.spread));
-        if (!Number.isFinite(hs) || !Number.isFinite(as) || !Number.isFinite(ln)) return;
-
-        const isHome = team.toLowerCase() === g.home.toLowerCase();
-        const isAway = team.toLowerCase() === g.away.toLowerCase();
-        const pickSide = isHome ? 'HOME' : (isAway ? 'AWAY' : 'UNKNOWN');
-
-        const adjHome = hs + ln;
-        let leader = 'PUSH';
-        if (adjHome > as) leader = 'HOME';
-        else if (adjHome < as) leader = 'AWAY';
-
-        if (leader === 'PUSH') selTeam.classList.add('status-push');
-        else if (pickSide !== 'UNKNOWN') selTeam.classList.add(pickSide === leader ? 'status-won' : 'status-lost');
-      }
-
-      selTeam.onchange = async () => {
-        try {
-          const confStr = (document.querySelector(`#conf-${g.id}`)?.value ?? '');
-          const conf    = confStr === '' ? null : Number(confStr);
-
-          await sbSavePick(CURRENT_WEEK, g.id, selTeam.value || null, conf);
-
-          const prev = myPicks[g.id] || {};
-          myPicks[g.id] = {
-            team: selTeam.value || null,
-            confidence: conf,
-            result: prev.result ?? null,
-            game_home: prev.game_home ?? g.home,
-            game_away: prev.game_away ?? g.away,
-            game_final: prev.game_final ?? g.final ?? false,
-            game_winner_ats: prev.game_winner_ats ?? g.winner_ats ?? null
-          };
-
-          updatePartialBanner();
-          updatePickTint();
-          if (typeof showToast==='function') showToast('Saved');
-        } catch (e) { console.error('selTeam save failed', e); }
-      };
-
-      tdP.appendChild(selTeam);
-      updatePickTint();
-
-      // Confidence cell
-      const tdC = document.createElement('td');
-      const selConf = document.createElement('select');
-      selConf.className = 'select conf';
-      selConf.id = `conf-${g.id}`;
-      selConf.disabled = locked;
-
-      const ph = document.createElement('option');
-      ph.value = ''; ph.textContent = '—';
-      selConf.appendChild(ph);
-
-      const current = myPicks[g.id]?.confidence != null ? Number(myPicks[g.id].confidence) : null;
-
-      confPool.forEach(v => {
-        const o = document.createElement('option');
-        o.value = String(v); o.textContent = String(v);
-        if (usedConfidence.has(v) && v !== current) o.disabled = true;
-        selConf.appendChild(o);
-      });
-
-      selConf.value = (current != null ? String(current) : '');
-
-      selConf.onchange = async () => {
-        try {
-          const hadPrev = (myPicks[g.id]?.confidence != null);
-          const prev = hadPrev ? Number(myPicks[g.id].confidence) : null;
-          if (hadPrev) usedConfidence.delete(prev);
-
-          const chosenStr = selConf.value;
-          const chosen = chosenStr === '' ? null : Number(chosenStr);
-          if (chosen != null) usedConfidence.add(chosen);
-
-          const team = (myPicks[g.id]?.team || selTeam.value) || null;
-
-          await sbSavePick(CURRENT_WEEK, g.id, team, chosen);
-          myPicks[g.id] = { team, confidence: chosen };
-
-          document.querySelectorAll('select.conf').forEach(s => {
-            const curStr = s.value;
-            const cur = curStr === '' ? null : Number(curStr);
-            for (const opt of s.options) {
-              if (opt.value === '') continue;
-              const val = Number(opt.value);
-              opt.disabled = (usedConfidence.has(val) && val !== cur);
-            }
-          });
-
-          updatePartialBanner();
-        } catch (e) { console.error('selConf save failed', e); }
-      };
-
-      tdC.appendChild(selConf);
-
-      tr.appendChild(tdM);
-      tr.appendChild(tdS);
-      tr.appendChild(tdP);
-      tr.appendChild(tdC);
-      tbody.appendChild(tr);
-    });
-
-    updatePartialBanner();
-    setLockedUI(locked);
-  }
-
-  // -----------------------
-  // Partial banner helpers
-  // -----------------------
-  function calcProgress() {
-    const total = games.length;
-    let complete = 0, started = 0;
-    games.forEach(g => {
-      const p = myPicks[g.id] || {};
-      const hasTeam = !!p.team;
-      const hasConf = (p.confidence != null);
-      if (hasTeam || hasConf) started++;
-      if (hasTeam && hasConf) complete++;
-    });
-    return { complete, total, started };
-  }
-
-  function updatePartialBanner() {
-    const box = document.getElementById('partialWarning');
-    const span = document.getElementById('partialCount');
-    if (!box || !span) return;
-    const { complete, total, started } = calcProgress();
-    if (complete === total && total > 0) {
-      box.style.display = 'none';
-    } else {
-      span.textContent = `${complete}/${total} games have both a team and confidence (${started} started).`;
-      box.style.display = '';
-    }
-  }
-
-  function setLockedUI(isLocked) {
-    const saveBtn = document.getElementById('savePicksBtn');
-    if (saveBtn) {
-      if (isLocked) { saveBtn.disabled = true; saveBtn.textContent = 'Locked'; }
-      else          { saveBtn.disabled = false; saveBtn.textContent = 'Save Picks'; }
-    }
-    document.querySelectorAll('#picks-table select').forEach(sel => {
-      sel.disabled = isLocked;
-    });
-    const bar = document.getElementById('partialWarning');
-    if (isLocked) { bar.style.display = 'block'; bar.textContent = 'This week is locked — picks cannot be changed.'; }
-    else          { updatePartialBanner(); }
-  }
-
-  document.addEventListener('DOMContentLoaded', init);
-</script>
-
-<!-- Save/Confirm logic -->
-<script>
-  function showStatus(msg, isError = false) {
-    const el = document.getElementById('saveStatus');
-    if (!el) return;
-    el.style.display = 'inline';
-    el.style.color = isError ? '#ff6b6b' : '#9be49b';
-    el.textContent = msg;
-  }
-  function clearStatus() {
-    const el = document.getElementById('saveStatus');
-    if (!el) return;
-    el.style.display = 'none';
-    el.textContent = '';
-  }
-  function openConfirmModal(){ document.getElementById('confirmModal').style.display='block'; }
-  function closeConfirmModal(){ document.getElementById('confirmModal').style.display='none'; }
-  function getWeekNumber(){ const el=document.getElementById('week-select'); return el?Number(el.value):NaN; }
-
-  function readUserSelections() {
-    const rows = Array.from(document.querySelectorAll('tr[data-game-id]'));
-    return rows.map(row => {
-      const gameId = row.getAttribute('data-game-id');
-      const home = row.getAttribute('data-home');
-      const away = row.getAttribute('data-away');
-      const spreadRaw = row.getAttribute('data-spread');
-      const spread = spreadRaw !== null && spreadRaw !== '' ? Number(spreadRaw) : null;
-
-      const teamEl = row.querySelector('.team-select');
-      const team = teamEl ? teamEl.value : null;
-
-      const confEl = row.querySelector('select.conf');
-      const confStr = confEl ? confEl.value : '';
+  const payload = rows
+    .map(r=>{
+      const game_id = Number(r.getAttribute('data-game-id'));
+      const teamSel = r.querySelector('select.team-select');
+      const confSel = r.querySelector('select.conf-select');
+      const team = teamSel && teamSel.value ? teamSel.value : null;
+      const confStr = confSel ? confSel.value : '';
       const confidence = confStr === '' ? null : Number(confStr);
+      return { username, season, week, game_id, team, confidence };
+    })
+    .filter(x => x.team || x.confidence != null);
 
-      return { game_id: gameId, home, away, spread, team, confidence, row, confEl };
+  const btn = document.getElementById('confirmSaveBtn');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  try{
+    await sbUpsertPicks(payload);
+    closeConfirmModal();
+    if (typeof showToast==='function') showToast('Saved!');
+  }catch(e){
+    console.error(e);
+    if (typeof showToast==='function') showToast('Save failed.');
+  }finally{
+    btn.disabled = false; btn.textContent = 'Confirm';
+  }
+}
+
+function initSaveFlow(){
+  document.getElementById('savePicksBtn').onclick = openConfirmModal;
+  document.getElementById('cancelConfirmBtn').onclick = closeConfirmModal;
+  document.getElementById('confirmSaveBtn').onclick = doSave;
+}
+
+/* -------------------------------------------------------------
+   Render
+------------------------------------------------------------- */
+function tintPickCell(selTeam, g){
+  selTeam.classList.remove('status-won','status-push','status-lost');
+
+  const mp = myPicks[g.id] || {};
+  const team = (mp.team ?? selTeam.value ?? '').toString();
+  if (!team) return;
+
+  const gameFinal = mp.game_final === true;
+  const winnerATS = mp.game_winner_ats;
+
+  if (gameFinal && winnerATS) {
+    const isHome = team.toLowerCase() === g.home.toLowerCase();
+    const isAway = team.toLowerCase() === g.away.toLowerCase();
+    const pickSide = isHome ? 'HOME' : (isAway ? 'AWAY' : 'UNKNOWN');
+
+    if (winnerATS === 'PUSH') selTeam.classList.add('status-push');
+    else if (pickSide === winnerATS) selTeam.classList.add('status-won');
+    else selTeam.classList.add('status-lost');
+    return;
+  }
+
+  if (g.home_score == null || g.away_score == null) return;
+
+  const hs = Number(g.home_score);
+  const as = Number(g.away_score);
+  const ln = Number((g.spread_frozen ?? g.spread));
+  if (!Number.isFinite(hs) || !Number.isFinite(as) || !Number.isFinite(ln)) return;
+
+  const isHome = team.toLowerCase() === g.home.toLowerCase();
+  const isAway = team.toLowerCase() === g.away.toLowerCase();
+  const pickSide = isHome ? 'HOME' : (isAway ? 'AWAY' : 'UNKNOWN');
+
+  const adjHome = hs + ln;
+  let leader = 'PUSH';
+  if (adjHome > as) leader = 'HOME';
+  else if (adjHome < as) leader = 'AWAY';
+
+  if (leader === 'PUSH') selTeam.classList.add('status-push');
+  else if (pickSide !== 'UNKNOWN') selTeam.classList.add(pickSide === leader ? 'status-won' : 'status-lost');
+}
+
+function rowHtml(g, confPool){
+  const line = (g.spread_frozen ?? g.spread);
+  const lineTxt = (line==null || line==='') ? '' : (Number(line)>0 ? '+'+Number(line) : String(Number(line)));
+
+  const my = myPicks[g.id] || {};
+  const curTeam = my.team || '';
+  const curConf = (my.confidence==null ? '' : String(my.confidence));
+
+  const confOpts = ['<option value="">—</option>']
+    .concat(confPool.map(n => `<option value="${n}">${n}</option>`))
+    .join('');
+
+  const awayAbbr = TEAM_LOGOS[g.away] || g.away.slice(0,3).toUpperCase();
+  const homeAbbr = TEAM_LOGOS[g.home] || g.home.slice(0,3).toUpperCase();
+
+  return `
+  <tr data-game-id="${g.id}" data-home="${g.home}" data-away="${g.away}" data-spread="${line ?? ''}" data-commence="${new Date(g.commence_time).getTime()||0}">
+    <td>
+      <div class="kickoff-tag hide-mobile">${kickoffText(g.commence_time)}</div>
+      <div class="matchup-grid">
+        <div class="matchup-away">
+          <span class="team-name">${g.away}</span>
+          <button type="button" class="bb-logo-btn" data-research="away">${makeTeamLogoOnly(g.away).outerHTML}</button>
+        </div>
+        <div style="text-align:center;">@</div>
+        <div class="matchup-home">
+          <button type="button" class="bb-logo-btn" data-research="home">${makeTeamLogoOnly(g.home).outerHTML}</button>
+          <span class="team-name">${g.home}</span>
+        </div>
+      </div>
+    </td>
+    <td>
+      <span class="badge ${g.spread_is_frozen ? 'frozen':''}" data-freeze="${g.id}">DK ${lineTxt}</span>
+    </td>
+    <td>
+      <select class="select team-select pick-select">
+        <option value="">—</option>
+        <option value="${g.away}" data-full="${g.away}" data-abbr="${awayAbbr}">${IS_MOBILE.matches ? awayAbbr : g.away}</option>
+        <option value="${g.home}" data-full="${g.home}" data-abbr="${homeAbbr}">${IS_MOBILE.matches ? homeAbbr : g.home}</option>
+      </select>
+    </td>
+    <td>
+      <select class="select conf-select" id="conf-${g.id}">
+        ${confOpts}
+      </select>
+    </td>
+  </tr>`;
+}
+
+function attachRowHandlers(tr, g){
+  const teamSel = tr.querySelector('select.team-select');
+  const confSel = tr.querySelector('select.conf-select');
+
+  teamSel.value = myPicks[g.id]?.team || '';
+  confSel.value = myPicks[g.id]?.confidence==null ? '' : String(myPicks[g.id].confidence);
+  teamSel.disabled = confSel.disabled = !!locked;
+
+  // abbr/full swap on focus/blur (mobile)
+  teamSel.addEventListener('focus',()=>{
+    Array.from(teamSel.options).forEach(opt=>{ if(opt.dataset.full) opt.textContent = opt.dataset.full; });
+  });
+  teamSel.addEventListener('blur',()=>{
+    Array.from(teamSel.options).forEach(opt=>{
+      if (opt.dataset.abbr && IS_MOBILE.matches) opt.textContent = opt.dataset.abbr;
+      else if (opt.dataset.full) opt.textContent = opt.dataset.full;
     });
-  }
+  });
 
-  function buildTop5(selections) {
-    const sorted = [...selections].sort((a, b) => b.confidence - a.confidence);
-    return sorted.slice(0, Math.min(5, selections.length));
-  }
+  // team change — allow saving team without confidence
+  teamSel.addEventListener('change', async ()=>{
+    try{
+      const username = localStorage.getItem('username') || window.CONFIG.USERNAME || '';
+      const season = window.CONFIG.SEASON_NUMBER || 2025;
+      const team = teamSel.value || null;
+      const confStr = confSel.value || '';
+      const confidence = confStr==='' ? null : Number(confStr);
 
-  function renderTop5Dialog(selections) {
-    const week = getWeekNumber();
-    const top5 = buildTop5(selections);
-
-    const summary = document.getElementById('confirmSummary');
-    if (summary) {
-      const { complete, total, started } = calcProgress();
-      summary.innerHTML = `
-        <div><strong>Week:</strong> ${week}</div>
-        <div><strong>Progress:</strong> ${complete}/${total} complete (${started} started)</div>
-        <div><strong>Previewing:</strong> Top 5 of your completed picks</div>
-      `;
-    }
-
-    const list = document.getElementById('top5List');
-    if (list) {
-      list.innerHTML = '';
-      top5.forEach(item => {
-        const opponent = item.team === item.home ? item.away : item.home;
-        const vsAt = item.team === item.home ? 'vs' : 'at';
-        const spreadTxt = (item.spread === null || Number.isNaN(item.spread))
-          ? ''
-          : `Spread: ${item.spread > 0 ? '+'+item.spread : item.spread}`;
-
-        const logoTeam = `<img src="logos/${item.team}.png" alt="${item.team}" onerror="this.style.display='none'" style="width:22px;height:22px;border-radius:50%;vertical-align:middle;margin-right:6px;">`;
-        const row = document.createElement('div');
-        row.style.padding = '8px';
-        row.style.borderBottom = '1px solid #222';
-        row.innerHTML = `
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-            <div style="display:flex; align-items:center;">
-              <div style="width:28px; text-align:right; margin-right:8px;"><strong>${item.confidence}</strong></div>
-              <div>${logoTeam}<strong>${item.team}</strong> ${vsAt} ${opponent}</div>
-            </div>
-            <div style="opacity:0.8; font-size:12px; text-align:right;">
-              <div>${spreadTxt}</div>
-            </div>
-          </div>
-        `;
-        list.appendChild(row);
-      });
-    }
-  }
-
-  let __pendingSelections = null;
-
-  function handleSaveClick() {
-    clearStatus();
-    const btn = document.getElementById('savePicksBtn');
-    btn.disabled = true;
-    btn.textContent = 'Preparing…';
-
-    try {
-      const selections = readUserSelections();
-
-      // Merge these into myPicks so calcProgress reflects the latest edits
-      selections.forEach(s => { myPicks[s.game_id] = { team: s.team, confidence: s.confidence }; });
+      await sbUpsertPicks([{ username, season, week: CURRENT_WEEK, game_id: g.id, team, confidence }]);
+      myPicks[g.id] = { ...(myPicks[g.id]||{}), team, confidence };
+      tintPickCell(teamSel, g);
       updatePartialBanner();
+      if (typeof showToast==='function') showToast('Saved team.');
+    }catch(e){ console.error('team save failed', e); }
+  });
 
-      // Keep all for stash, but only show complete ones in the Top 5 preview
-      __pendingSelections = selections;
-      const completeOnly = selections.filter(s => s.team && s.confidence != null);
-      renderTop5Dialog(completeOnly);
+  // confidence change — allow saving confidence without team
+  confSel.addEventListener('change', async ()=>{
+    try{
+      const username = localStorage.getItem('username') || window.CONFIG.USERNAME || '';
+      const season = window.CONFIG.SEASON_NUMBER || 2025;
+      const confStr = confSel.value || '';
+      const confidence = confStr==='' ? null : Number(confStr);
+      const team = teamSel.value || null;
 
-      openConfirmModal();
-    } catch (e) {
-      showStatus(String(e), true);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Save Picks';
-    }
+      await sbUpsertPicks([{ username, season, week: CURRENT_WEEK, game_id: g.id, team, confidence }]);
+      myPicks[g.id] = { ...(myPicks[g.id]||{}), team, confidence };
+      tintPickCell(teamSel, g);
+      updatePartialBanner();
+      if (typeof showToast==='function') showToast('Saved confidence.');
+    }catch(e){ console.error('confidence save failed', e); }
+  });
+
+  // research click (logo buttons)
+  tr.querySelectorAll('[data-research]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const who = btn.getAttribute('data-research');
+      const team = (who==='home') ? g.home : g.away;
+      const opp  = (who==='home') ? g.away : g.home;
+      window.openTeamResearch?.({ team, opponent: opp, week: CURRENT_WEEK, game: g });
+    });
+  });
+
+  // admin: freeze single game by clicking badge
+  const badge = tr.querySelector('[data-freeze]');
+  if (USERNAME === 'Will' && badge && !g.spread_is_frozen){
+    badge.style.cursor='pointer';
+    badge.title='Click to freeze this line';
+    badge.addEventListener('click', async ()=>{
+      try{ await sbFreezeGame(g.id); await render(); }
+      catch(e){ console.error('freeze', e); if (typeof showToast==='function') showToast('Freeze failed'); }
+    });
   }
 
-  async function handleConfirmSave() {
-    const btn = document.getElementById('savePicksBtn');
-    const confirmBtn = document.getElementById('confirmSaveBtn');
-    confirmBtn.disabled = true;
-    confirmBtn.textContent = 'Saving…';
+  // initial tint
+  tintPickCell(teamSel, g);
+}
 
-    try {
-      const week = getWeekNumber();
-
-// Save any selection that has *either* a team OR a confidence set.
-// If one is missing, upsert NULL so users can stage one part and finish later.
-const rows = (__pendingSelections || [])
-  .filter(s => (s.team || s.confidence != null))
-  .map(s => ({
-    username: localStorage.getItem('username') || (window.CONFIG.USERNAME || ''),
-    season: window.CONFIG.SEASON,
-    week,
-    game_id: s.game_id,
-    team: s.team || null,
-    confidence: (s.confidence != null ? s.confidence : null)
-  }));
-
-
-      if (rows.length) {
-        const { error } = await window.sb
-          .from('picks')
-          .upsert(rows, { onConflict: 'username,season,week,game_id' });
-        if (error) throw new Error(error.message || 'Failed to save picks.');
+function sortRows(mode){
+  const tbody = document.getElementById('picks-body');
+  const rows = Array.from(tbody.querySelectorAll('tr[data-game-id]'));
+  if (mode === 'conf'){
+    rows.sort((a,b)=>{
+      const ca = Number(a.querySelector('.conf-select')?.value || '-9999');
+      const cb = Number(b.querySelector('.conf-select')?.value || '-9999');
+      // desc by confidence; blank to bottom; then kickoff time asc
+      if (cb !== ca){
+        if (isNaN(ca)) return 1;
+        if (isNaN(cb)) return -1;
+        return cb - ca;
       }
+      const ta = Number(a.dataset.commence || a.getAttribute('data-commence') || '0');
+      const tb = Number(b.dataset.commence || b.getAttribute('data-commence') || '0');
+      return ta - tb;
+    });
+  } else {
+    rows.sort((a,b)=>{
+      const ta = Number(a.dataset.commence || a.getAttribute('data-commence') || '0');
+      const tb = Number(b.dataset.commence || b.getAttribute('data-commence') || '0');
+      return ta - tb;
+    });
+  }
+  rows.forEach(r=>tbody.appendChild(r));
+}
 
-      closeConfirmModal();
-      showStatus(rows.length ? 'Saved!' : 'Nothing to save yet (no selections started).', false);
-    } catch (e) {
-      showStatus(String(e), true);
-    } finally {
-      confirmBtn.disabled = false;
-      confirmBtn.textContent = 'Confirm';
-      btn.disabled = false;
-      btn.textContent = 'Save Picks';
-    }
+async function render(){
+  locked  = await sbLoadWeekLock(CURRENT_WEEK);
+  games   = await sbLoadGames(CURRENT_WEEK);
+  myPicks = await sbLoadMyPicks(CURRENT_WEEK);
+
+  usedConfidence = new Set(
+    Object.values(myPicks)
+      .map(p => (p.confidence != null ? Number(p.confidence) : undefined))
+      .filter(v => v != null)
+  );
+
+  const tbody = document.getElementById('picks-body');
+  tbody.innerHTML = '';
+
+  const pool = confPoolFor(games.length);
+  games.forEach(g=>{
+    tbody.insertAdjacentHTML('beforeend', rowHtml(g, pool));
+    attachRowHandlers(tbody.lastElementChild, g);
+  });
+
+  sortRows(document.getElementById('sortMode').value);
+  updatePartialBanner();
+}
+
+/* -------------------------------------------------------------
+   Init
+------------------------------------------------------------- */
+async function init(){
+  // Resolve link token -> username, else localStorage/CONFIG
+  const t = new URLSearchParams(location.search).get('t');
+  if (t){
+    try{
+      const res = await sbResolveLink(t);
+      if(res?.username){ setUsername(res.username); localStorage.setItem('username', res.username); history.replaceState({},'',location.pathname); }
+    }catch(e){ console.error('resolve-link', e); }
+  }
+  if (!USERNAME){
+    const u = localStorage.getItem('username') || window.CONFIG.USERNAME || '';
+    if (u) setUsername(u);
   }
 
-  function initSaveFlow() {
-    const saveBtn = document.getElementById('savePicksBtn');
-    const confirmBtn = document.getElementById('confirmSaveBtn');
-    const cancelBtn = document.getElementById('cancelConfirmBtn');
+  // Week select
+  const weeks = await sbLoadWeeks();
+  const sel = document.getElementById('week-select');
+  sel.innerHTML = '';
+  weeks.forEach(w=>{
+    const o = document.createElement('option');
+    o.value = w.week;
+    o.textContent = 'Week ' + w.week;
+    sel.appendChild(o);
+  });
+  const maybeDefault = await sbGetCurrentWeek().catch(()=>null);
+  const candidate = Number(maybeDefault);
+  CURRENT_WEEK = (Number.isFinite(candidate) && weeks.some(w => Number(w.week)===candidate))
+    ? candidate
+    : (weeks[0]?.week || 1);
+  sel.value = CURRENT_WEEK;
 
-  // Ensure the pending selection buffer exists.
-    if (!window.__pendingSelections) window.__pendingSelections = [];
-    if (saveBtn)   saveBtn.addEventListener('click', handleSaveClick);
-    if (confirmBtn)confirmBtn.addEventListener('click', handleConfirmSave);
-    if (cancelBtn) cancelBtn.addEventListener('click', closeConfirmModal);
-  }
+  sel.onchange = ()=>{ CURRENT_WEEK = Number(sel.value); render(); };
+  document.getElementById('sortMode').onchange = ()=> sortRows(document.getElementById('sortMode').value);
+
+  // Admin buttons
+  document.getElementById('btn-lock').onclick        = async ()=>{ await adminLock(CURRENT_WEEK,'lock');   await render(); };
+  document.getElementById('btn-unlock').onclick      = async ()=>{ await adminLock(CURRENT_WEEK,'unlock'); await render(); };
+  document.getElementById('btn-freeze-week').onclick = async ()=>{ await sbFreezeWeek(CURRENT_WEEK);       await render(); };
+  document.getElementById('btn-default-week').onclick= async ()=>{
+    try{ await sbSetCurrentWeek(CURRENT_WEEK); showToast?.(`Default week set to ${CURRENT_WEEK}`); }catch(e){ console.error(e); }
+  };
+  document.getElementById('btn-pull-scores').onclick = async ()=>{
+    try{ const r = await sbPullScoresNow(CURRENT_WEEK); showToast?.(r?.message || 'Scores pulled.'); await render(); }catch(e){ console.error(e); showToast?.('Pull scores failed.'); }
+  };
+
+  initSaveFlow();
+  await render();
+}
+
+document.addEventListener('DOMContentLoaded', init);
 </script>
-
-<script>
-  // ===== Research modal: helpers & wiring =====
-  let __seasonFinalsCache = null;
-  async function loadSeasonFinals(){
-    if (__seasonFinalsCache) return __seasonFinalsCache;
-    const { data, error } = await window.sb
-      .from('games')
-      .select('id,home,away,home_score,away_score,final,commence_time,spread,spread_frozen,winner_ats')
-      .eq('season', window.CONFIG.SEASON)
-      .eq('final', true);
-    __seasonFinalsCache = error ? [] : (data || []);
-    return __seasonFinalsCache;
-  }
-  function splitCityNick(full){
-    const parts = String(full).split(' ');
-    return { city: parts.slice(0,-1).join(' ') || full, nick: parts.slice(-1)[0] || '' };
-  }
-  function injectLogo(team){
-    const slot = document.getElementById('bbResearchLogoSlot');
-    if (!slot) return;
-    slot.innerHTML = '';
-    try {
-      const n = makeTeamLogoOnly(team);
-      if (n) { n.style.width='40px'; n.style.height='40px'; n.style.borderRadius='50%'; n.style.objectFit='contain'; slot.appendChild(n); }
-    } catch(_) {}
-  }
-  async function computeSeasonStats(){
-    const games = await loadSeasonFinals();
-    const byTeam = {};
-    games.forEach(g=>{
-      const hs=Number(g.home_score)||0, as=Number(g.away_score)||0;
-      (byTeam[g.home] ||= {gp:0,pf:0,pa:0,seq:[]});
-      (byTeam[g.away] ||= {gp:0,pf:0,pa:0,seq:[]});
-      byTeam[g.home].gp++; byTeam[g.home].pf+=hs; byTeam[g.home].pa+=as; byTeam[g.home].seq.push({pf:hs,pa:as});
-      byTeam[g.away].gp++; byTeam[g.away].pf+=as; byTeam[g.away].pa+=hs; byTeam[g.away].seq.push({pf:as,pa:hs});
-    });
-    const stats = {};
-    Object.keys(byTeam).forEach(t=>{
-      const v=byTeam[t], gp=v.gp||0;
-      const ppg = gp? v.pf/gp : 0;
-      const papg = gp? v.pa/gp : 0;
-      const last3=v.seq.slice(-3);
-      const l3pf = last3.reduce((a,b)=>a+b.pf,0)/(last3.length||1);
-      const l3pa = last3.reduce((a,b)=>a+b.pa,0)/(last3.length||1);
-      stats[t]={ppg,papg,l3pf,l3pa};
-    });
-    const rank=(key,asc)=>Object.fromEntries(Object.keys(stats).sort((a,b)=>asc?(stats[a][key]-stats[b][key]):(stats[b][key]-stats[a][key])).map((t,i)=>[t,i+1]));
-    return { stats, rPPG:rank('ppg',false), rPAPG:rank('papg',true) };
-  }
-  function computeSeasonATS(team, finalGames) {
-    const res = { overall:{w:0,l:0,p:0}, home:{w:0,l:0,p:0}, away:{w:0,l:0,p:0} };
-    if (!team || !Array.isArray(finalGames) || !finalGames.length) return res;
-    finalGames.forEach(g=>{
-      if (!g || !g.final) return;
-      const isHome = g.home === team, isAway = g.away === team;
-      if (!isHome && !isAway) return;
-      const sideWin = g.winner_ats === 'PUSH' ? 'P' :
-        (g.winner_ats === 'HOME' && isHome) || (g.winner_ats === 'AWAY' && isAway) ? 'W' : 'L';
-      if (sideWin==='W') res.overall.w++; else if (sideWin==='L') res.overall.l++; else res.overall.p++;
-      const bucket = isHome ? res.home : res.away;
-      if (sideWin==='W') bucket.w++; else if (sideWin==='L') bucket.l++; else bucket.p++;
-    });
-    return res;
-  }
-  function formatWLP({ w,l,p }) { const Z=n=>Number.isFinite(n)?n:0; return `${Z(w)}-${Z(l)}-${Z(p)}`; }
-  function closeResearch(){ const bd=document.getElementById('researchBackdrop'); if (bd) bd.style.display='none'; }
-  document.addEventListener('click', (e)=>{ if(e.target?.id==='bbResearchClose'||e.target?.id==='researchBackdrop') closeResearch(); });
-  document.addEventListener('keydown',(e)=>{ if(e.key==='Escape') closeResearch(); });
-
-  async function openTeamResearch({team, opponent, week, game}){
-    const bd=document.getElementById('researchBackdrop'); if (bd) bd.style.display='block';
-    document.getElementById('bbWeek').textContent = String(week);
-    const {city,nick}=splitCityNick(team);
-    document.getElementById('bbTeamCity').textContent = city;
-    document.getElementById('bbTeamNick').textContent = nick;
-    injectLogo(team);
-
-    // Line from team's perspective
-    const base = (game && (game.spread_frozen ?? game.spread));
-    let lineForTeam=null;
-    if (base!=null && base!==''){ const s=Number(base); if(Number.isFinite(s)) lineForTeam = (team === game.home) ? s : -s; }
-    document.getElementById('bbLine').textContent = (lineForTeam==null)? '—' : (lineForTeam>0?`+${lineForTeam}`:String(lineForTeam));
-
-    // Opponent & kickoff
-    document.getElementById('bbOpponent').textContent = opponent || '—';
-    if (game?.commence_time){
-      const dt=new Date(game.commence_time);
-      document.getElementById('bbKick').textContent = dt.toLocaleString('en-US',{weekday:'short', hour:'numeric', minute:'2-digit'});
-    } else document.getElementById('bbKick').textContent='—';
-
-    // Season stats (PPG/PAPG/Last3)
-    const {stats,rPPG,rPAPG} = await computeSeasonStats();
-    const s = stats[team] || {ppg:0,papg:0,l3pf:0,l3pa:0};
-    const fmtRank = n => Number.isFinite(n) ? ` (Rank ${n})` : '';
-    document.getElementById('bbPPG').textContent  = `${s.ppg.toFixed(1)}${fmtRank(rPPG[team])}`;
-    document.getElementById('bbPAPG').textContent = `${s.papg.toFixed(1)}${fmtRank(rPAPG[team])}`;
-    document.getElementById('bbLast3').textContent= `${s.l3pf.toFixed(1)} / ${s.l3pa.toFixed(1)}`;
-
-    // ATS snapshot
-    const finals = await loadSeasonFinals(); // cached
-    const ats = computeSeasonATS(team, finals);
-    const hasAny = (ats.overall.w + ats.overall.l + ats.overall.p) > 0;
-    document.getElementById('bbATSOverall').textContent = hasAny ? formatWLP(ats.overall) : '—';
-    document.getElementById('bbATSHome').textContent    = hasAny ? formatWLP(ats.home)    : '—';
-    document.getElementById('bbATSAway').textContent    = hasAny ? formatWLP(ats.away)    : '—';
-
-    // Phase 2: Injuries + team stats (ESPN-normalized edge)
-    try { const inj   = await sbGetInjuries({ team, season: window.CONFIG.SEASON, week }); renderInjuries(inj); } catch(e){ console.warn('injuries', e); }
-    try { const stats = await sbGetTeamStats({ team, season: window.CONFIG.SEASON });     renderTeamStats(stats); } catch(e){ console.warn('teamstats', e); }
-  }
-  window.openTeamResearch = openTeamResearch;
-
-  function fmtPct(n){ const v=Number(n); return Number.isFinite(v)?(v*100).toFixed(1)+'%':'—'; }
-  function setTxt(id,val){ const el=document.getElementById(id); if(el) el.textContent=val; }
-
-  function renderInjuries(json) {
-    const box = document.getElementById('bbInjuries');
-    if (!box) return;
-    try {
-      const list = Array.isArray(json?.items) ? json.items : [];
-      if (!list.length) { box.textContent = 'No notable injuries reported.'; return; }
-      const rows = list.slice(0,8).map(it=>{
-        const pos = it?.pos || ''; const name = it?.player || 'Player';
-        const status = it?.status || ''; const note = it?.note ? ` (${it.note})` : '';
-        return `${pos ? pos + ' ' : ''}${name} — ${status}${note}`;
-      });
-      box.innerHTML = rows.map(s=>`<div>${s}</div>`).join('');
-    } catch { box.textContent = 'Unavailable'; }
-  }
-
-  function renderTeamStats(json) {
-    const s = json?.stats || {};
-    setTxt('bbYdsOff', (s.off_yds_pg != null) ? String(s.off_yds_pg) : '—');
-    setTxt('bbYdsDef', (s.def_yds_pg != null) ? String(s.def_yds_pg) : '—');
-    setTxt('bbYPP',   '—');
-    setTxt('bbThird', '—');
-    setTxt('bbRZ',    '—');
-  }
-</script>
-
 </body>
 </html>
