@@ -98,6 +98,24 @@ async function sbSavePick(week, gameId, team, confidence) {
     .upsert(row, { onConflict: 'username,season,week,game_id' });
   if (error) throw error;
 }
+// BB:SB:UPSERT_PICKS_START
+async function sbUpsertPicks(rows) {
+  // rows: [{ username, season, week, game_id, team, confidence }, ...]
+  if (!Array.isArray(rows) || rows.length === 0) return;
+  const payload = rows.map(r => ({
+    username: r.username ?? USERNAME,
+    season:   r.season   ?? SEASON,
+    week:     r.week,
+    game_id:  r.game_id,
+    team:     (r.team === '' ? null : r.team),
+    confidence: (r.confidence === '' || r.confidence == null ? null : Number(r.confidence))
+  }));
+  const { error } = await sb
+    .from('picks')
+    .upsert(payload, { onConflict: 'username,season,week,game_id' });
+  if (error) throw error;
+}
+// BB:SB:UPSERT_PICKS_END
 
 // Consensus (for Add Bet prefill, standings net, etc.)
 async function sbLoadConsensus(week) {
@@ -519,6 +537,7 @@ Object.assign(window, {
   sbLoadWeekLock,
   sbLoadMyPicks,
   sbSavePick,
+  sbUpsertPicks,
   sbLoadConsensus,
   sbLoadGamePicks,
   sbLoadUsersWeekPicks,
