@@ -316,6 +316,16 @@
       });
       tdW.appendChild(pillEl);
 
+if (r.consensusSpread != null) {
+  const n = Number(r.consensusSpread);
+  const spreadEl = document.createElement('span');
+  spreadEl.style.marginLeft = '6px';
+  spreadEl.textContent = (n > 0 ? '+'+n : String(n));
+  pillEl.appendChild(spreadEl);
+}
+tdW.appendChild(pillEl);
+
+
       // tinting (final or provisional)
       pillEl.classList.remove('pill-won','pill-push','pill-lost');
       if (r.final === true && r.winner_ats) {

@@ -166,6 +166,14 @@ async function sbLoadConsensus(week) {
     if (homeStr > awayStr) { winner = r.home; net = homeStr - awayStr; }
     else if (awayStr > homeStr) { winner = r.away; net = awayStr - homeStr; }
 
+      const baseLine = (r.spread_frozen ?? r.spread);
+    let consensusSpread = null;
+    if (Number.isFinite(Number(baseLine)) && winner) {
+      const n = Number(baseLine);
+      if (winner === r.home) consensusSpread = n;     // home line as-is
+      else if (winner === r.away) consensusSpread = -n; // away side gets flipped
+    }
+
     return {
       id: r.id,
       away: r.away,
@@ -179,8 +187,10 @@ async function sbLoadConsensus(week) {
       awaySum: awayStr,
       homeSum: homeStr,
       net,
-      winner
+      winner,
+      consensusSpread
     };
+
   });
 
   return rows;
