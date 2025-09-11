@@ -1150,7 +1150,7 @@ header { text-align: initial; } /* stomp any accidental centering */
 
   /* Protect header labels and keep the @ column narrow on phones */
   #picks-table thead th { white-space: nowrap; }
-  .matchup-grid { grid-template-columns: 1fr 10px 1fr; column-gap: 2px; }
+  .matchup-grid { grid-template-columns: 1fr 6px 1fr; column-gap: 2px; }
 
 
 
