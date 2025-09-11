@@ -1150,7 +1150,8 @@ header { text-align: initial; } /* stomp any accidental centering */
 
   /* Protect header labels and keep the @ column narrow on phones */
   #picks-table thead th { white-space: nowrap; }
-  .matchup-grid { grid-template-columns: 1fr 6px 1fr; column-gap: 2px; }
+    .matchup-grid { grid-template-columns: 1fr 20px 1fr; column-gap: 6px; }
+
 
 
 
@@ -1167,8 +1168,8 @@ header { text-align: initial; } /* stomp any accidental centering */
   }
 
   /* Tighten matchup cell a bit */
-  .matchup-grid { column-gap: 6px; }
-  .matchup-away, .matchup-home { gap: 6px; }
+  .matchup-grid { column-gap: 2px; }
+  .matchup-away, .matchup-home { gap: 2px; }
   .matchup-away .team-name, .matchup-home .team-name {
     white-space: nowrap;
     text-overflow: ellipsis;
