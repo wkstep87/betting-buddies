@@ -1136,7 +1136,7 @@ header { text-align: initial; } /* stomp any accidental centering */
   #picks-table thead th:nth-child(1)::after { content: "Matchup"; position: absolute; inset: 0; color: var(--muted); text-align: center; }
 
   #picks-table thead th:nth-child(2) { position: relative; color: transparent; }
-  #picks-table thead th:nth-child(2)::after { content: "Spread"; position: absolute; inset: 0; color: var(--muted); text-align: center; }
+  #picks-table thead th:nth-child(2)::after { content: "Home Spread"; position: absolute; inset: 0; color: var(--muted); text-align: center; }
 
   #picks-table thead th:nth-child(3) { position: relative; color: transparent; }
   #picks-table thead th:nth-child(3)::after { content: "Pick"; position: absolute; inset: 0; color: var(--muted); text-align: center; }
