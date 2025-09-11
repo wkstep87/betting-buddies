@@ -443,8 +443,13 @@ td > .pill + .btn.tiny { margin-left: 8px; }
   /* Hide long team names; show only the round logos */
   .team-name { display: none !important; }
 
-  /* Consensus pill: hide the text label, keep the small logo circle */
-  .pill span { display: none; }
+  /* Consensus pill: on tiny phones hide the long name, but KEEP abbr + spread */
+.pill .name { display: none !important; }
+.pill .abbr, .pill .spread { display: inline !important; }
+
+/* small spacing for spread inside the pill */
+.pill .spread { margin-left: 6px; }
+
 
   /* Your Pick select: keep it usable but visually minimal.
      Logo preview (pick-logo) becomes the main visual. */

@@ -319,9 +319,10 @@
 if (r.consensusSpread != null) {
   const n = Number(r.consensusSpread);
   const spreadEl = document.createElement('span');
-  spreadEl.style.marginLeft = '6px';
-  spreadEl.textContent = (n > 0 ? '+'+n : String(n));
-  pillEl.appendChild(spreadEl);
+spreadEl.className = 'spread';           // <-- tag it for CSS
+spreadEl.textContent = (n > 0 ? '+'+n : String(n));
+pillEl.appendChild(spreadEl);
+
 }
 tdW.appendChild(pillEl);
 
