@@ -456,14 +456,16 @@ td > .pill + .btn.tiny { margin-left: 8px; }
 .pill .spread { margin-left: 6px; }
 
 
-  /* Your Pick select: keep it usable but visually minimal.
-     Logo preview (pick-logo) becomes the main visual. */
+    /* Your Pick select: compact, but readable */
   .team-select {
-    max-width: 1px;       /* collapse width */
-    opacity: 1.00;        /* nearly hidden but focusable */
-    position: relative;
-    z-index: 1;           /* keeps it interactive */
+    width: 72px;
+    min-width: 72px;
+    max-width: 72px;
+    text-align: center;
+    text-align-last: center;
+    padding-inline: 6px;
   }
+
   .pick-logo {
     display: inline-block;
   }
@@ -1126,9 +1128,30 @@ header { text-align: initial; } /* stomp any accidental centering */
   #picks-table th:nth-child(2), #picks-table td:nth-child(2) { width: 26%; } /* Spread */
   #picks-table th:nth-child(3), #picks-table td:nth-child(3) { width: 20%; } /* Your Pick */
   #picks-table th:nth-child(4), #picks-table td:nth-child(4) { width: 22%; } /* Confidence */
+  /* Keep header cells from wrapping/chopping */
+  #picks-table thead th { white-space: nowrap; }
+
+  /* Visually shorten header labels on phones */
+  #picks-table thead th:nth-child(1) { position: relative; color: transparent; }
+  #picks-table thead th:nth-child(1)::after { content: "Matchup"; position: absolute; inset: 0; color: var(--muted); text-align: center; }
+
+  #picks-table thead th:nth-child(2) { position: relative; color: transparent; }
+  #picks-table thead th:nth-child(2)::after { content: "Spread"; position: absolute; inset: 0; color: var(--muted); text-align: center; }
+
+  #picks-table thead th:nth-child(3) { position: relative; color: transparent; }
+  #picks-table thead th:nth-child(3)::after { content: "Pick"; position: absolute; inset: 0; color: var(--muted); text-align: center; }
+
+  #picks-table thead th:nth-child(4) { position: relative; color: transparent; }
+  #picks-table thead th:nth-child(4)::after { content: "Confidence"; position: absolute; inset: 0; color: var(--muted); text-align: center; }
+
+  /* Make the Pick and Confidence selects usable on phones */
+  #picks-table td:nth-child(3) .team-select { width: 72px; min-width: 72px; }
+  #picks-table td:nth-child(4) .conf       { width: 64px; min-width: 64px; text-align-last: center; }
+
   /* Protect header labels and keep the @ column narrow on phones */
   #picks-table thead th { white-space: nowrap; }
-  .matchup-grid { grid-template-columns: 1fr 20px 1fr; }
+  .matchup-grid { grid-template-columns: 1fr 20px 1fr; column-gap: 6px; }
+
 
 
 
