@@ -1153,7 +1153,7 @@ header { text-align: initial; } /* stomp any accidental centering */
   /* Make column widths take effect */
   #group-table { table-layout: fixed; width: 100%; }
   #group-table th:nth-child(1), #group-table td:nth-child(1) { width: 400px; } /* Matchup */
-  #group-table th:nth-child(2), #group-table td:nth-child(2) { width: 220px; } /* Consensus Pick */
+  #group-table th:nth-child(2), #group-table td:nth-child(2) { width: 230px; } /* Consensus Pick */
   #group-table th:nth-child(3), #group-table td:nth-child(3) { width: 88px; text-align: center; } /* Add Bet */
   #group-table th:nth-child(4), #group-table td:nth-child(3) { width: 34px; text-align: center; } /* Net */
   #group-table th:nth-child(5), #group-table td:nth-child(2) { width: 210px; } /* Strength Bar */
