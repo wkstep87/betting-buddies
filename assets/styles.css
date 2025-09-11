@@ -4,10 +4,11 @@ header{position:sticky;top:0;z-index:10;background:rgba(11,15,20,.9);backdrop-fi
 /* === Align Matchup into 3 fixed columns (Away | @ | Home) === */
 .matchup-grid {
   display: grid;
-  grid-template-columns: 1fr 28px 1fr;
+  grid-template-columns: minmax(0,1fr) 28px minmax(0,1fr);
   column-gap: 8px;
   align-items: center;
 }
+
 
 .matchup-away {
   display: flex;
@@ -46,10 +47,13 @@ header{position:sticky;top:0;z-index:10;background:rgba(11,15,20,.9);backdrop-fi
 .table td {
   vertical-align: middle;
 }
-.table td:nth-child(1),
-.table td:nth-child(3) {
-  padding-left: 14px;  /* make col 1 (Matchup) and col 3 (Your Pick) consistent */
+/* Picks: keep Matchup grid perfectly centered */
+#picks-table td:nth-child(1),
+#picks-table td:nth-child(3) {
+  padding: 10px 14px; /* symmetric L/R so center stays true */
 }
+#picks-table td:nth-child(1) .matchup-grid { width: 100%; }
+
 /* Make spread text a bit larger and white */
 .badge {
   font-size: .8rem;   /* bump size up slightly (adjust if needed) */
@@ -110,10 +114,11 @@ header{position:sticky;top:0;z-index:10;background:rgba(11,15,20,.9);backdrop-fi
 /* Matchup layout (already on Picks; duplicated here to be safe) */
 .matchup-grid {
   display: grid;
-  grid-template-columns: 1fr 28px 1fr;
+  grid-template-columns: minmax(0,1fr) 28px minmax(0,1fr);
   column-gap: 8px;
   align-items: center;
 }
+
 .matchup-away {
   display: flex;
   justify-content: flex-end;
@@ -860,12 +865,7 @@ pickAbbrEl.textContent = TEAM_LOGOS[fullTeamName];  // e.g., "KC"
   .pick-abbr { display: inline !important; }
 }
 
-/* Web-only: give matchup a touch more room for long names */
-@media (min-width: 701px) {
-  .table .matchup-grid {
-    grid-template-columns: 260px 28px 260px !important; /* was ~220/28/220 */
-  }
-}
+
 /* ==== Desktop vs Mobile visibility (controlled by body.is-mobile) ==== */
 .only-mobile { display: none; }
 .only-desktop { display: inline; }
@@ -1172,16 +1172,18 @@ header { text-align: initial; } /* stomp any accidental centering */
   #picks-table th, #picks-table td { padding: 6px 6px; font-size: 13px; }
 
   /* Column widths (adjust to taste) */
-  #picks-table th:nth-child(1), #picks-table td:nth-child(1) { width: 36%; } /* Matchup */
-  #picks-table th:nth-child(2), #picks-table td:nth-child(2) { width: 24%; } /* Spread */
+  #picks-table th:nth-child(1), #picks-table td:nth-child(1) { width: 34%; } /* Matchup */
+  #picks-table th:nth-child(2), #picks-table td:nth-child(2) { width: 26%; } /* Spread */
   #picks-table th:nth-child(3), #picks-table td:nth-child(3) { width: 20%; } /* Your Pick */
   #picks-table th:nth-child(4), #picks-table td:nth-child(4) { width: 22%; } /* Confidence */
 
   /* Center "Confidence" header and values */
+  #picks-table th:nth-child(2),
+
   #picks-table th:nth-child(3),
-  #picks-table td:nth-child(3) { text-align: center; }
+ 
   #picks-table th:nth-child(4),
-  #picks-table td:nth-child(4) { text-align: center; }
+
 
   /* Center the number inside the <select> */
   #picks-table td:nth-child(4) select.conf {
@@ -1207,12 +1209,14 @@ header { text-align: initial; } /* stomp any accidental centering */
 @media (min-width: 921px) {
   #picks-table { table-layout: fixed; width: 100%; }
 
-  /* Tune these numbers as you like */
-  #picks-table th:nth-child(1), #picks-table td:nth-child(1) { width: 40%; } /* Matchup */
-  #picks-table th:nth-child(2), #picks-table td:nth-child(2) { width: 20%; } /* Spread */
-  #picks-table th:nth-child(3), #picks-table td:nth-child(3) { width: 20%; } /* Your Pick */
-  #picks-table th:nth-child(4), #picks-table td:nth-child(4) { width: 20%; text-align:center; } /* Confidence */
-  #picks-table td:nth-child(4) select.conf { text-align-last: center; }
+  /* column widths */
+  #picks-table th:nth-child(1), #picks-table td:nth-child(1) { width: 40%; text-align: center; } /* Matchup */
+  #picks-table th:nth-child(2), #picks-table td:nth-child(2) { width: 15%; } /* Home Spread */
+  #picks-table th:nth-child(3), #picks-table td:nth-child(3) { width: 25%; } /* Your Pick */
+  #picks-table th:nth-child(4), #picks-table td:nth-child(4) { width: 20%; text-align: center; } /* Confidence */
+
+  /* center the selected value in the Confidence dropdown */
+  #picks-table td:nth-child(4) select.conf-select { text-align-last: center; }
 }
 /* BB:CSS:PICKS:ADMIN_HOVERS_AND_FREEZE_CELL */
 @media (min-width: 921px) {
@@ -1316,3 +1320,24 @@ header { text-align: initial; } /* stomp any accidental centering */
 .filters .week { grid-column: 2; justify-self: end; }
 .filters .sort { grid-column: 2; justify-self: end; }
 
+/* BB:CSS:PICKS:DESKTOP_COLUMNS — override for Picks table only */
+@media (min-width: 921px) {
+  #picks-table { table-layout: fixed; width: 100%; }
+
+  /* Column widths */
+  #picks-table th:nth-child(1), #picks-table td:nth-child(1) { width: 45%; } /* Matchup */
+  #picks-table th:nth-child(2), #picks-table td:nth-child(2) { width: 15%; } /* Home Spread */
+  #picks-table th:nth-child(3), #picks-table td:nth-child(3) { width: 20%; text-align: center; } /* Your Pick */
+  #picks-table th:nth-child(4), #picks-table td:nth-child(4) { width: 20%; text-align: center; } /* Confidence */
+
+  /* Center the chosen value in the Confidence select */
+  #picks-table td:nth-child(4) select.conf-select { text-align-last: center; }
+}
+
+/* Keep the matchup grid centered inside col 1 */
+#picks-table td:nth-child(1), #picks-table td:nth-child(3) { padding: 10px 14px; } /* symmetric */
+#picks-table td:nth-child(1) .matchup-grid { width: 100%; }
+
+/* Picks desktop: lock Your Pick centering */
+#picks-table td:nth-child(3) { text-align: center; }
+#picks-table td:nth-child(3) .pick-select { display: block; margin: 0 auto; }

@@ -28,7 +28,7 @@
     .toolbar label { font-weight:500; }
     .toolbar .select { min-width:110px; }
     .brand-logo { height:22px; }
-    .matchup-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center}
+    .matchup-grid{display:grid;grid-template-columns:minmax(0,1fr) 28px minmax(0,1fr);gap:8px;align-items:center}
     .matchup-away,.matchup-home{display:flex;align-items:center;gap:6px}
     .bb-logo-btn{background:transparent;border:0;padding:0;display:inline-flex;align-items:center;cursor:pointer}
     .bb-logo-btn img{width:22px;height:22px;border-radius:50%;object-fit:contain;background:#0a0a0a}
@@ -49,7 +49,7 @@
   </style>
 </head>
 
-<body>
+<body class="page-picks">
 <header>
   <div class="nav">
     <div class="brand">
@@ -99,7 +99,7 @@
     </div>
 
     <div class="table-wrap">
-      <table class="table picks">
+      <table id="picks-table" class="table picks">
         <thead>
           <tr>
             <th>Matchup</th>
