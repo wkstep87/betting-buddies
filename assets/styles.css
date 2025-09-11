@@ -405,11 +405,13 @@ td > .pill + .btn.tiny { margin-left: 8px; }
   }
   .toolbar > div { width: 100%; }
 
-  /* Matchup columns: let names wrap; keep "@" narrow */
+  @media (max-width: 600px) {
   .matchup-grid {
-    grid-template-columns: 1fr 22px 1fr;   /* away | @ | home */
-    column-gap: 6px;
+    grid-template-columns: 1fr 14px 1fr; /* tighter @ column */
+    column-gap: 4px;
   }
+}
+
 
   /* Picks page selects: full width & centered value */
   .pick-select,
@@ -439,7 +441,7 @@ td > .pill + .btn.tiny { margin-left: 8px; }
 /* Very narrow phones */
 @media (max-width: 420px) {
   .table th, .table td { padding: 7px 5px; font-size: 12px; }
-  .matchup-grid { grid-template-columns: 1fr 20px 1fr; }
+  .matchup-grid { grid-template-columns: 1fr 12px 1fr; column-gap: 4px; }
   .pill { padding: 3px 7px; }
   .strength-track { height: 10px; }
 }
@@ -1125,8 +1127,8 @@ header { text-align: initial; } /* stomp any accidental centering */
 
   /* Column widths (adjust to taste) */
   #picks-table th:nth-child(1), #picks-table td:nth-child(1) { width: 32%; } /* Matchup */
-  #picks-table th:nth-child(2), #picks-table td:nth-child(2) { width: 24%; } /* Spread */
-  #picks-table th:nth-child(3), #picks-table td:nth-child(3) { width: 22%; } /* Your Pick */
+  #picks-table th:nth-child(2), #picks-table td:nth-child(2) { width: 23%; } /* Spread */
+  #picks-table th:nth-child(3), #picks-table td:nth-child(3) { width: 23%; } /* Your Pick */
   #picks-table th:nth-child(4), #picks-table td:nth-child(4) { width: 22%; } /* Confidence */
   /* Keep header cells from wrapping/chopping */
   #picks-table thead th { white-space: nowrap; }
