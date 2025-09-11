@@ -1126,9 +1126,9 @@ header { text-align: initial; } /* stomp any accidental centering */
   #picks-table th, #picks-table td { padding: 6px 6px; font-size: 13px; }
 
   /* Column widths (adjust to taste) */
-  #picks-table th:nth-child(1), #picks-table td:nth-child(1) { width: 32%; } /* Matchup */
-  #picks-table th:nth-child(2), #picks-table td:nth-child(2) { width: 23%; } /* Spread */
-  #picks-table th:nth-child(3), #picks-table td:nth-child(3) { width: 23%; } /* Your Pick */
+  #picks-table th:nth-child(1), #picks-table td:nth-child(1) { width: 30%; } /* Matchup */
+  #picks-table th:nth-child(2), #picks-table td:nth-child(2) { width: 22%; } /* Spread */
+  #picks-table th:nth-child(3), #picks-table td:nth-child(3) { width: 26%; } /* Your Pick */
   #picks-table th:nth-child(4), #picks-table td:nth-child(4) { width: 22%; } /* Confidence */
   /* Keep header cells from wrapping/chopping */
   #picks-table thead th { white-space: nowrap; }
