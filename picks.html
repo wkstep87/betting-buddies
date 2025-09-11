@@ -38,6 +38,14 @@
     .badge.frozen{background:#0b2a46;border:1px solid #3477ad}
     .partial-note{background:#2b1f00;border:1px solid #7a5b00;padding:8px;border-radius:6px}
     .nav .badge { margin-left:auto }
+    /* -- duplicate confidence warning styles -- */
+    .conf-dup-select { box-shadow: inset 0 0 0 2px #eab308; background:#3b3a1a; }
+    .conf-dup-cell   { position:relative; }
+    .conf-dup-cell::after {
+    content:""; position:absolute; top:0; right:0; width:4px; height:100%;
+    background:#eab308; opacity:.95;
+}
+
   </style>
 </head>
 
@@ -248,6 +256,49 @@ function applyLabelMode(sel, mode){ // 'full' | 'abbr'
     const abbr = opt.dataset.abbr || full;
     opt.textContent = (mode==='abbr') ? abbr : full;
   });
+}
+
+/* -------------------------------------------------------------
+   Confidence: enforce uniqueness + warn duplicates
+------------------------------------------------------------- */
+function computeConfCounts() {
+  const counts = new Map();
+  document.querySelectorAll('select.conf-select').forEach(sel => {
+    const v = sel.value;
+    if (!v) return;
+    counts.set(v, (counts.get(v) || 0) + 1);
+  });
+  return counts;
+}
+
+function updateConfDisabledOptions() {
+  const counts = computeConfCounts();
+  document.querySelectorAll('select.conf-select').forEach(sel => {
+    const current = sel.value;
+    // Disable numbers used elsewhere; keep the row's current value enabled
+    Array.from(sel.options).forEach(opt => {
+      if (opt.value === "") { opt.disabled = false; return; }
+      if (opt.value === current) { opt.disabled = false; return; }
+      opt.disabled = counts.has(opt.value);
+    });
+  });
+}
+
+function updateConfWarnings() {
+  const counts = computeConfCounts();
+  document.querySelectorAll('select.conf-select').forEach(sel => {
+    const td = sel.parentElement;
+    const v = sel.value;
+    const isDup = v && counts.get(v) > 1;
+    sel.classList.toggle('conf-dup-select', !!isDup);
+    td.classList.toggle('conf-dup-cell',   !!isDup);
+  });
+}
+
+/* single entry point to refresh confidence UI */
+function refreshConfidenceUI() {
+  updateConfDisabledOptions();
+  updateConfWarnings();
 }
 
 /* -------------------------------------------------------------
@@ -486,6 +537,7 @@ function attachRowHandlers(tr, g){
       await sbUpsertPicks([{ username, season, week: CURRENT_WEEK, game_id: g.id, team, confidence }]);
       myPicks[g.id] = { ...(myPicks[g.id]||{}), team, confidence };
       tintPickCell(teamSel, g);
+      refreshConfidenceUI();
       updatePartialBanner();
       if (typeof showToast==='function') showToast('Saved team.');
     }catch(e){ console.error('team save failed', e); }
@@ -575,13 +627,15 @@ async function render(){
   tbody.innerHTML = '';
 
   const pool = confPoolFor(games.length);
-  games.forEach(g=>{
+    games.forEach(g=>{
     tbody.insertAdjacentHTML('beforeend', rowHtml(g, pool));
     attachRowHandlers(tbody.lastElementChild, g);
   });
 
+  refreshConfidenceUI();      
   sortRows(document.getElementById('sortMode').value);
   updatePartialBanner();
+
 }
 
 /* -------------------------------------------------------------
