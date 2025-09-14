@@ -49,6 +49,58 @@
 #results-table th:first-child {
   text-align: center;
 }
+/* ===== Results: Mobile tightening (page-local) ===== */
+@media (max-width: 800px), (hover:none) and (pointer:coarse) {
+  /* Base tightening */
+  #results-table th, #results-table td { padding: 6px 8px; font-size: 13px; }
+  #results-table thead th { white-space: nowrap; }
+  .team-cell { gap: 6px; }
+  .team-logo { width: 20px; height: 20px; }
+
+  /* Dataset 1: Consensus by Rank (Rank | Win | Loss | Push | +/-) */
+  #results-table[data-ds="consensusByRank"] th:nth-child(1),
+  #results-table[data-ds="consensusByRank"] td:nth-child(1) { width: 18%; text-align: center; }
+  #results-table[data-ds="consensusByRank"] th:nth-child(2),
+  #results-table[data-ds="consensusByRank"] td:nth-child(2),
+  #results-table[data-ds="consensusByRank"] th:nth-child(3),
+  #results-table[data-ds="consensusByRank"] td:nth-child(3),
+  #results-table[data-ds="consensusByRank"] th:nth-child(4),
+  #results-table[data-ds="consensusByRank"] td:nth-child(4),
+  #results-table[data-ds="consensusByRank"] th:nth-child(5),
+  #results-table[data-ds="consensusByRank"] td:nth-child(5) { width: 20.5%; text-align: center; }
+
+  /* Dataset 2: Record by User Agreement (Users | Win | Loss | Push | +/-) */
+  #results-table[data-ds="agreement"] th:nth-child(1),
+  #results-table[data-ds="agreement"] td:nth-child(1) { width: 22%; text-align: center; }
+  #results-table[data-ds="agreement"] th:nth-child(2),
+  #results-table[data-ds="agreement"] td:nth-child(2),
+  #results-table[data-ds="agreement"] th:nth-child(3),
+  #results-table[data-ds="agreement"] td:nth-child(3),
+  #results-table[data-ds="agreement"] th:nth-child(4),
+  #results-table[data-ds="agreement"] td:nth-child(4),
+  #results-table[data-ds="agreement"] th:nth-child(5),
+  #results-table[data-ds="agreement"] td:nth-child(5) { width: 19.5%; text-align: center; }
+
+  /* Shorten the first header label to "Users" on phones for Dataset 2 */
+  #results-table[data-ds="agreement"] thead th:nth-child(1) { position: relative; color: transparent; }
+  #results-table[data-ds="agreement"] thead th:nth-child(1)::after {
+    content: "Users"; position: absolute; inset: 0; color: inherit; text-align: center;
+  }
+
+  /* Dataset 3: User by Team (Team | Win | Loss | Push | Avg Weight | ATS +/-) */
+  #results-table[data-ds="userTeam"] th:nth-child(1),
+  #results-table[data-ds="userTeam"] td:nth-child(1) { width: 36%; }
+  #results-table[data-ds="userTeam"] th:nth-child(2),
+  #results-table[data-ds="userTeam"] td:nth-child(2),
+  #results-table[data-ds="userTeam"] th:nth-child(3),
+  #results-table[data-ds="userTeam"] td:nth-child(3),
+  #results-table[data-ds="userTeam"] th:nth-child(4),
+  #results-table[data-ds="userTeam"] td:nth-child(4) { width: 12%; text-align: center; }
+  #results-table[data-ds="userTeam"] th:nth-child(5),
+  #results-table[data-ds="userTeam"] td:nth-child(5) { width: 14%; text-align: center; } /* Avg Weight */
+  #results-table[data-ds="userTeam"] th:nth-child(6),
+  #results-table[data-ds="userTeam"] td:nth-child(6) { width: 14%; text-align: right; }  /* ATS +/- */
+}
 
   </style>
 </head>
@@ -112,7 +164,9 @@ const el = {
   thead:    document.getElementById('results-head'),
   tbody:    document.getElementById('results-body'),
   tfoot:    document.getElementById('results-foot'),
+  table:    document.getElementById('results-table'),
 };
+
 
 let ALL_GAMES = [];
 let ALL_PICKS = [];
@@ -535,10 +589,12 @@ function renderUserTeam(){
 function render(){
   el.tfoot.innerHTML = '';
   const v = el.dataset.value;
+  el.table.setAttribute('data-ds', v);   // <-- enables dataset-specific mobile CSS
   if (v === 'consensusByRank') return renderConsensusByRank();
   if (v === 'agreement')      return renderAgreement();
   if (v === 'userTeam')       return renderUserTeam();
 }
+
 
 /* ---------- Kickoff ---------- */
 initResults().catch(err=>{
