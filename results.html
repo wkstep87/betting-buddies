@@ -50,11 +50,11 @@
   text-align: center;
 }
 /* ===== Results: Mobile tightening (page-local) ===== */
-@media (max-width: 620px), (hover:none) and (pointer:coarse) {
+@media (max-width: 800px), (hover:none) and (pointer:coarse) {
   /* Base tightening */
-  #results-table th, #results-table td { padding: 2px 2px; font-size: 13px; }
+  #results-table th, #results-table td { padding: 6px 8px; font-size: 13px; }
   #results-table thead th { white-space: nowrap; }
-  .team-cell { gap: 2px; }
+  .team-cell { gap: 6px; }
   .team-logo { width: 20px; height: 20px; }
 
   /* Dataset 1: Consensus by Rank (Rank | Win | Loss | Push | +/-) */
@@ -594,7 +594,6 @@ function render(){
   if (v === 'agreement')      return renderAgreement();
   if (v === 'userTeam')       return renderUserTeam();
 }
-
 
 /* ---------- Kickoff ---------- */
 initResults().catch(err=>{
