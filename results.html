@@ -49,7 +49,7 @@
     #results-table th:first-child { text-align: center; }
 
    /* ===== Results: Mobile tightening (tighter auto-fit) ===== */
-@media (max-width: 800px), (hover:none) and (pointer:coarse) {
+@media (max-width: 480px), (hover:none) and (pointer:coarse) {
   #results-table { table-layout: auto; width: 100%; }
   #results-table th, #results-table td {
     padding: 3px 4px;
@@ -91,7 +91,7 @@
     #results-table[data-ds="userTeam"] .team-cell { justify-content: center; }
 
     /* Mobile-only: hide full name, show abbreviation on User by Team */
-    @media (max-width: 800px), (hover:none) and (pointer:coarse) {
+    @media (max-width: 480px), (hover:none) and (pointer:coarse) {
       #results-table[data-ds="userTeam"] .team-name { display: none; }
       #results-table[data-ds="userTeam"] .team-abbr { display: inline; }
     }
