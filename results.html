@@ -48,35 +48,43 @@
     #results-table td:first-child { text-align: center; }
     #results-table th:first-child { text-align: center; }
 
-    /* ===== Results: Mobile tightening (page-local) ===== */
-    @media (max-width: 800px), (hover:none) and (pointer:coarse) {
-      #results-table th, #results-table td { padding: 4px 6px; font-size: 12px; }
-      #results-table thead th { white-space: nowrap; }
-      .team-cell { gap: 4px; }
-      .team-logo { width: 18px; height: 18px; }
+   /* ===== Results: Mobile tightening (tighter auto-fit) ===== */
+@media (max-width: 800px), (hover:none) and (pointer:coarse) {
+  #results-table { table-layout: auto; width: 100%; }
+  #results-table th, #results-table td {
+    padding: 3px 4px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .team-cell { gap: 4px; }
+  .team-logo { width: 16px; height: 16px; }
 
-      /* Consensus by Rank: shrink Rank column, let others auto-fit */
-      #results-table[data-ds="consensusByRank"] th:nth-child(1),
-      #results-table[data-ds="consensusByRank"] td:nth-child(1) { width: 12%; }
+  /* Let Team col flex wider, numeric cols shrink */
+  #results-table[data-ds="userTeam"] th,
+  #results-table[data-ds="userTeam"] td {
+    width: auto;
+  }
+  #results-table[data-ds="userTeam"] th:first-child,
+  #results-table[data-ds="userTeam"] td:first-child {
+    min-width: 60px; /* logos+abbr fit */
+    text-align: center;
+  }
+  #results-table[data-ds="userTeam"] th:not(:first-child),
+  #results-table[data-ds="userTeam"] td:not(:first-child) {
+    text-align: center;
+    min-width: 36px; /* just enough for W/L/P/Avg/ATS */
+  }
 
-      /* Record by User Agreement: shrink Users col */
-      #results-table[data-ds="agreement"] th:nth-child(1),
-      #results-table[data-ds="agreement"] td:nth-child(1) { width: 18%; }
+  /* Consensus by Rank & Agreement: auto-fit too */
+  #results-table[data-ds="consensusByRank"] th,
+  #results-table[data-ds="consensusByRank"] td,
+  #results-table[data-ds="agreement"] th,
+  #results-table[data-ds="agreement"] td {
+    min-width: 36px;
+    text-align: center;
+  }
+}
 
-      /* User by Team: shrink numeric cols, widen Team just enough */
-      #results-table[data-ds="userTeam"] th:nth-child(1),
-      #results-table[data-ds="userTeam"] td:nth-child(1) { width: 40%; }
-      #results-table[data-ds="userTeam"] th:nth-child(2),
-      #results-table[data-ds="userTeam"] td:nth-child(2),
-      #results-table[data-ds="userTeam"] th:nth-child(3),
-      #results-table[data-ds="userTeam"] td:nth-child(3),
-      #results-table[data-ds="userTeam"] th:nth-child(4),
-      #results-table[data-ds="userTeam"] td:nth-child(4),
-      #results-table[data-ds="userTeam"] th:nth-child(5),
-      #results-table[data-ds="userTeam"] td:nth-child(5),
-      #results-table[data-ds="userTeam"] th:nth-child(6),
-      #results-table[data-ds="userTeam"] td:nth-child(6) { width: 12%; }
-    }
 
     /* Results: name vs abbr toggling for User by Team */
     .team-abbr { display: none; }  /* desktop shows full name */
