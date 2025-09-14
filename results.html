@@ -36,50 +36,57 @@
       .table.minw-results { min-width: 560px; }
       .toolbar .select { min-width: 140px; }
     }
-/* Results: team cell with logo */
-.team-cell { display:flex; align-items:center; justify-content:center; gap:8px; }
-.team-logo { width:22px; height:22px; border-radius:50%; object-fit:cover; display:block; }
-@media (max-width:800px), (hover:none) and (pointer:coarse) {
-  .team-logo { width:20px; height:20px; }
-}
-/* Center the Team column body (but keep header left-aligned if desired) */
-#results-table td:first-child {
-  text-align: center;
-}
-#results-table th:first-child {
-  text-align: center;
-}
-/* ===== Results: Mobile tightening (page-local) ===== */
-@media (max-width: 800px), (hover:none) and (pointer:coarse) {
-  #results-table th, #results-table td { padding: 4px 6px; font-size: 12px; }
-  #results-table thead th { white-space: nowrap; }
-  .team-cell { gap: 4px; }
-  .team-logo { width: 18px; height: 18px; }
 
-  /* Consensus by Rank: shrink Rank column, let others auto-fit */
-  #results-table[data-ds="consensusByRank"] th:nth-child(1),
-  #results-table[data-ds="consensusByRank"] td:nth-child(1) { width: 12%; }
+    /* Results: team cell with logo */
+    .team-cell { display:flex; align-items:center; justify-content:center; gap:8px; }
+    .team-logo { width:22px; height:22px; border-radius:50%; object-fit:cover; display:block; }
+    @media (max-width:800px), (hover:none) and (pointer:coarse) {
+      .team-logo { width:20px; height:20px; }
+    }
 
-  /* Record by User Agreement: shrink Users col */
-  #results-table[data-ds="agreement"] th:nth-child(1),
-  #results-table[data-ds="agreement"] td:nth-child(1) { width: 18%; }
+    /* Center the Team column body (and header) */
+    #results-table td:first-child { text-align: center; }
+    #results-table th:first-child { text-align: center; }
 
-  /* User by Team: shrink numeric cols, widen Team just enough */
-  #results-table[data-ds="userTeam"] th:nth-child(1),
-  #results-table[data-ds="userTeam"] td:nth-child(1) { width: 40%; }
-  #results-table[data-ds="userTeam"] th:nth-child(2),
-  #results-table[data-ds="userTeam"] td:nth-child(2),
-  #results-table[data-ds="userTeam"] th:nth-child(3),
-  #results-table[data-ds="userTeam"] td:nth-child(3),
-  #results-table[data-ds="userTeam"] th:nth-child(4),
-  #results-table[data-ds="userTeam"] td:nth-child(4),
-  #results-table[data-ds="userTeam"] th:nth-child(5),
-  #results-table[data-ds="userTeam"] td:nth-child(5),
-  #results-table[data-ds="userTeam"] th:nth-child(6),
-  #results-table[data-ds="userTeam"] td:nth-child(6) { width: 12%; }
-}
+    /* ===== Results: Mobile tightening (page-local) ===== */
+    @media (max-width: 800px), (hover:none) and (pointer:coarse) {
+      #results-table th, #results-table td { padding: 4px 6px; font-size: 12px; }
+      #results-table thead th { white-space: nowrap; }
+      .team-cell { gap: 4px; }
+      .team-logo { width: 18px; height: 18px; }
 
+      /* Consensus by Rank: shrink Rank column, let others auto-fit */
+      #results-table[data-ds="consensusByRank"] th:nth-child(1),
+      #results-table[data-ds="consensusByRank"] td:nth-child(1) { width: 12%; }
 
+      /* Record by User Agreement: shrink Users col */
+      #results-table[data-ds="agreement"] th:nth-child(1),
+      #results-table[data-ds="agreement"] td:nth-child(1) { width: 18%; }
+
+      /* User by Team: shrink numeric cols, widen Team just enough */
+      #results-table[data-ds="userTeam"] th:nth-child(1),
+      #results-table[data-ds="userTeam"] td:nth-child(1) { width: 40%; }
+      #results-table[data-ds="userTeam"] th:nth-child(2),
+      #results-table[data-ds="userTeam"] td:nth-child(2),
+      #results-table[data-ds="userTeam"] th:nth-child(3),
+      #results-table[data-ds="userTeam"] td:nth-child(3),
+      #results-table[data-ds="userTeam"] th:nth-child(4),
+      #results-table[data-ds="userTeam"] td:nth-child(4),
+      #results-table[data-ds="userTeam"] th:nth-child(5),
+      #results-table[data-ds="userTeam"] td:nth-child(5),
+      #results-table[data-ds="userTeam"] th:nth-child(6),
+      #results-table[data-ds="userTeam"] td:nth-child(6) { width: 12%; }
+    }
+
+    /* Results: name vs abbr toggling for User by Team */
+    .team-abbr { display: none; }  /* desktop shows full name */
+    #results-table[data-ds="userTeam"] .team-cell { justify-content: center; }
+
+    /* Mobile-only: hide full name, show abbreviation on User by Team */
+    @media (max-width: 800px), (hover:none) and (pointer:coarse) {
+      #results-table[data-ds="userTeam"] .team-name { display: none; }
+      #results-table[data-ds="userTeam"] .team-abbr { display: inline; }
+    }
   </style>
 </head>
 
@@ -145,7 +152,6 @@ const el = {
   table:    document.getElementById('results-table'),
 };
 
-
 let ALL_GAMES = [];
 let ALL_PICKS = [];
 let USERS = [];
@@ -179,7 +185,7 @@ async function initResults(){
     ALL_GAMES = data || [];
   }
 
-  // All picks across the season (existing helper is fine)
+  // All picks across the season
   ALL_PICKS = await sbLoadAllPicks(null);
 
   // Users list
@@ -190,7 +196,6 @@ async function initResults(){
   el.userSel.addEventListener('change', render);
   onDatasetChange();
 }
-
 
 function onDatasetChange(){
   const v = el.dataset.value;
@@ -237,6 +242,7 @@ function getHomeLine(g){
   if (generic!= null)             return generic;
   return null;
 }
+
 // Home ATS margin = (home_score + line) - away_score = (home_score - away_score) + line
 function homeAtsMargin(g){
   const L = getHomeLine(g);
@@ -297,7 +303,8 @@ function buildConsensusIndex(){
   });
   return rows;
 }
-// Use the same helper as Picks/Group pages if present
+
+// Use the same logo helper used elsewhere (if present)
 function renderTeamLogo(teamName){
   try {
     if (typeof makeTeamLogoOnly === 'function') {
@@ -307,6 +314,15 @@ function renderTeamLogo(teamName){
   } catch(e){}
   return ''; // fallback: no logo
 }
+
+// Map full team name -> abbreviation (via TEAM_LOGOS if available; fallback derives initials)
+function teamAbbr(teamName){
+  const m = (window.TEAM_LOGOS && window.TEAM_LOGOS[teamName]) || null;
+  if (m && (m.abbr || m.short || m.code)) return (m.abbr || m.short || m.code);
+  return String(teamName||'')
+    .split(/\s+/).map(w=>w[0]||'').join('').toUpperCase().slice(0,4);
+}
+
 /* ---------- Dataset renderers ---------- */
 
 // A) Consensus by Rank (1..16) — cumulative W-L-P for consensus side
@@ -371,7 +387,6 @@ function renderConsensusByRank(){
       <td class="center">${fmtSign(totDiff)}</td>
     </tr>`;
 }
-
 
 // B) Record by User Agreement (1..6) — W-L-P for consensus side per agreeCount
 function renderAgreement(){
@@ -454,8 +469,7 @@ function renderAgreement(){
     </tr>`;
 }
 
-// C) User → Team (W-L-P + Team ATS +/-)
-// Default sort: teams the user has picked (by times picked desc), then never-picked teams by team ATS +/- desc
+// C) User by Team (W | L | P | Avg | ATS +/-)
 function renderUserTeam(){
   const currentUser = el.userSel.value || USERS[0] || '';
   const gById = new Map(ALL_GAMES.map(g=>[g.id,g]));
@@ -525,28 +539,34 @@ function renderUserTeam(){
     return a.team.localeCompare(b.team);
   });
 
-  // header (adds Average Weight between Push and ATS)
+  // header: W | L | P | Avg | ATS +/-
   el.thead.innerHTML = `
     <tr>
       <th>Team</th>
-      <th class="center">Win</th>
-      <th class="center">Loss</th>
-      <th class="center">Push</th>
-      <th class="center">Average Weight</th>
+      <th class="center">W</th>
+      <th class="center">L</th>
+      <th class="center">P</th>
+      <th class="center">Avg</th>
       <th class="right">ATS +/-</th>
     </tr>`;
 
-  // body (keeps logo + centered team cell)
+  // body (logo + name on desktop, abbr on mobile)
   el.tbody.innerHTML = rows.map(r => {
     const logoHtml = (typeof renderTeamLogo === 'function') ? renderTeamLogo(r.team) : '';
     return `
       <tr>
-        <td><div class="team-cell">${logoHtml}<span>${r.team}</span></div></td>
+        <td>
+          <div class="team-cell">
+            ${logoHtml}
+            <span class="team-name">${r.team}</span>
+            <span class="team-abbr">${teamAbbr(r.team)}</span>
+          </div>
+        </td>
         <td class="center">${fmtInt(r.w)}</td>
         <td class="center">${fmtInt(r.l)}</td>
         <td class="center">${fmtInt(r.p)}</td>
         <td class="center">${fmt1(r.avg)}</td>
-        <td class="center">${fmt1dp(r.ats)}</td>
+        <td class="right">${fmt1dp(r.ats)}</td>
       </tr>`;
   }).join('');
 
@@ -567,7 +587,7 @@ function renderUserTeam(){
 function render(){
   el.tfoot.innerHTML = '';
   const v = el.dataset.value;
-  el.table.setAttribute('data-ds', v);   // <-- enables dataset-specific mobile CSS
+  el.table.setAttribute('data-ds', v);   // enables dataset-specific mobile CSS
   if (v === 'consensusByRank') return renderConsensusByRank();
   if (v === 'agreement')      return renderAgreement();
   if (v === 'userTeam')       return renderUserTeam();
