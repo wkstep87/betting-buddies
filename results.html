@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Results · Betting Buddies</title>
+
+  <link rel="manifest" href="/site.webmanifest" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" href="/assets/icons/favicon-32.png" sizes="32x32" />
+  <link rel="icon" type="image/png" href="/assets/icons/favicon-16.png" sizes="16x16" />
+  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon-180.png" sizes="180x180" />
+  <meta name="theme-color" content="#0B1220" />
+
+  <link rel="stylesheet" href="assets/styles.css" />
+
+  <!-- Order matters: lib -> config -> helpers -> page -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+  <script src="assets/config.js"></script>
+  <script src="assets/supabase.js"></script>
+  <script src="assets/common.js"></script>
+
+  <style>
+    /* ===== Results page-local styles only (no global edits) ===== */
+    .brand-logo { height: 22px; }
+    .toolbar { display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+    .toolbar label { font-weight:500; }
+    .toolbar .select { min-width:160px; }
+    .table.minw-results { min-width: 640px; }
+    .muted { opacity:.8; }
+    .right { text-align:right; }
+    .center { text-align:center; }
+    .pill { font-weight:600; padding:2px 8px; }
+    .pill.total { background:#0f172a; border:1px solid #243b53; }
+    @media (max-width: 800px), (hover:none) and (pointer:coarse) {
+      .table.minw-results { min-width: 560px; }
+      .toolbar .select { min-width: 140px; }
+    }
+/* Results: team cell with logo */
+.team-cell { display:flex; align-items:center; justify-content:center; gap:8px; }
+.team-logo { width:22px; height:22px; border-radius:50%; object-fit:cover; display:block; }
+@media (max-width:800px), (hover:none) and (pointer:coarse) {
+  .team-logo { width:20px; height:20px; }
+}
+/* Center the Team column body (but keep header left-aligned if desired) */
+#results-table td:first-child {
+  text-align: center;
+}
+#results-table th:first-child {
+  text-align: center;
+}
+
+  </style>
+</head>
+
+<body class="page-results">
+<header>
+  <div class="nav">
+    <div class="brand">
+      <img src="assets/BB1_clean_transparent_optimized.png" alt="Betting Buddies" class="brand-logo">
+    </div>
+
+    <nav class="nav-links">
+      <!-- BB:NAV:INSERT_RESULTS_LINK — keep order consistent across pages -->
+      <a href="picks.html">Picks</a>
+      <a href="group.html">Group</a>
+      <a href="standings.html">Standings</a>
+      <a href="bankroll.html">Bankroll</a>
+      <a href="results.html" aria-current="page">Results</a>
+    </nav>
+
+    <div class="spacer"></div>
+  </div>
+</header>
+
+<main>
+  <div class="card">
+    <div class="toolbar">
+      <label>Dataset:
+        <select id="dataset" class="select">
+          <option value="consensusByRank" selected>Consensus by Rank</option>
+          <option value="agreement">Record by User Agreement</option>
+          <option value="userTeam">User by Team</option>
+        </select>
+      </label>
+
+      <label id="userFilterWrap" style="display:none">User:
+        <select id="userFilter" class="select"></select>
+      </label>
+    </div>
+
+    <div class="table-wrap">
+      <table class="table minw-results" id="results-table">
+        <thead id="results-head"></thead>
+        <tbody id="results-body"></tbody>
+        <tfoot id="results-foot"></tfoot>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script>
+/* ============================================================
+   BB:RESULTS — page script (self-contained)
+   Reuses: sbLoadCompletedGames(week=null), sbLoadAllPicks(week=null)
+   ============================================================ */
+
+const el = {
+  dataset: document.getElementById('dataset'),
+  userWrap: document.getElementById('userFilterWrap'),
+  userSel:  document.getElementById('userFilter'),
+  thead:    document.getElementById('results-head'),
+  tbody:    document.getElementById('results-body'),
+  tfoot:    document.getElementById('results-foot'),
+};
+
+let ALL_GAMES = [];
+let ALL_PICKS = [];
+let USERS = [];
+
+function fmtInt(n){ return Number(n||0).toString(); }
+function fmtSign(n){ const v = Number(n||0); return (v>0?'+':'') + v.toString(); }
+function fmt1(n){ const v = Number(n||0); return (v>0?'+':'') + v.toFixed(1); }
+function fmt1dp(n){ const v = Number(n||0); return (v>0?'+':'') + v.toFixed(1); }
+function byAsc(a,b){ return a<b?-1:a>b?1:0; }
+function byDesc(a,b){ return a>b?-1:a<b?1:0; }
+
+/* ---------- Core loaders ---------- */
+async function initResults(){
+  const season = window.CONFIG && window.CONFIG.SEASON;
+
+  // Load finalized games WITH scores & spreads (home-based line variants)
+  {
+    const { data, error } = await window.sb
+      .from('games')
+      .select(`
+        id, week, home, away, winner_ats, final,
+        home_score, away_score,
+        spread_home, spread, spread_frozen, spread_is_frozen
+      `)
+      .eq('season', season)
+      .eq('final', true)
+      .order('week', { ascending: true })
+      .order('id', { ascending: true });
+
+    if (error) throw error;
+    ALL_GAMES = data || [];
+  }
+
+  // All picks across the season (existing helper is fine)
+  ALL_PICKS = await sbLoadAllPicks(null);
+
+  // Users list
+  USERS = Array.from(new Set(ALL_PICKS.map(p => p.username))).sort(byAsc);
+  el.userSel.innerHTML = USERS.map(u => `<option value="${u}">${u}</option>`).join('');
+
+  el.dataset.addEventListener('change', onDatasetChange);
+  el.userSel.addEventListener('change', render);
+  onDatasetChange();
+}
+
+
+function onDatasetChange(){
+  const v = el.dataset.value;
+  const needsUser = (v === 'userTeam');
+  el.userWrap.style.display = needsUser ? '' : 'none';
+  render();
+}
+
+/* ---------- Helpers shared across datasets ---------- */
+
+// safe getter: first non-null/undefined among keys
+function pick(g, ...keys){
+  for (const k of keys){
+    if (g && g[k] != null) return g[k];
+  }
+  return null;
+}
+function num(v){
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+// Normalized accessors (support snake_case and camelCase)
+function gHomeName(g){ return pick(g, 'home', 'home_team', 'homeTeam'); }
+function gAwayName(g){ return pick(g, 'away', 'away_team', 'awayTeam'); }
+function gWinnerAtsRaw(g){ return pick(g, 'winner_ats', 'winnerAts'); }
+function gWeek(g){ return pick(g, 'week', 'week_number', 'weekNumber'); }
+
+function gHomeScore(g){ return num(pick(g, 'home_score', 'homeScore')); }
+function gAwayScore(g){ return num(pick(g, 'away_score', 'awayScore')); }
+
+// Home-based line (+ = home dog, − = home fav).
+// Priority: explicit frozen (when flagged) → frozen value → spread_home → spread → null
+function getHomeLine(g){
+  const isFrozen = g && (g.spread_is_frozen === true || g.spread_is_frozen === 'true');
+  const frozen   = num(g && g.spread_frozen);
+  const home     = num(g && g.spread_home);
+  const generic  = num(g && g.spread);
+
+  if (isFrozen && frozen != null) return frozen;
+  if (frozen != null)             return frozen;
+  if (home   != null)             return home;
+  if (generic!= null)             return generic;
+  return null;
+}
+// Home ATS margin = (home_score + line) - away_score = (home_score - away_score) + line
+function homeAtsMargin(g){
+  const L = getHomeLine(g);
+  const hs = gHomeScore(g);
+  const as = gAwayScore(g);
+  if (L == null || hs == null || as == null) return null;
+  return (hs - as) + L;
+}
+
+// Winner ATS with fallback if winner_ats is missing
+function winnerAts(g){
+  const raw = gWinnerAtsRaw(g);
+  if (raw === 'HOME' || raw === 'AWAY' || raw === 'PUSH') return raw;
+  const h = homeAtsMargin(g);
+  if (h == null) return null;
+  if (h > 0) return 'HOME';
+  if (h < 0) return 'AWAY';
+  return 'PUSH';
+}
+
+// Classify W/L/P for a chosen side tag: 'HOME' | 'AWAY'
+function resultForSide(g, sideTag){
+  const w = winnerAts(g);
+  if (w === null) return null;      // no line/score
+  if (w === 'PUSH') return 'P';
+  return (w === sideTag) ? 'W' : 'L';
+}
+
+// Build per-game consensus entry (using confidence sums by team name)
+function buildConsensusIndex(){
+  const gById = new Map(ALL_GAMES.map(g => [g.id, g]));
+  const sums = new Map(); // game_id -> {home:0, away:0}
+
+  ALL_PICKS.forEach(p => {
+    const g = gById.get(p.game_id);
+    if (!g) return;
+    const homeName = gHomeName(g);
+    const awayName = gAwayName(g);
+    const rec = sums.get(p.game_id) || { home:0, away:0 };
+    if (p.team === homeName) rec.home += (p.confidence||0);
+    else if (p.team === awayName) rec.away += (p.confidence||0);
+    sums.set(p.game_id, rec);
+  });
+
+  const rows = [];
+  ALL_GAMES.forEach(g => {
+    const s = sums.get(g.id) || {home:0,away:0};
+    const diff = Math.abs(s.home - s.away);
+    if (diff === 0) return; // ignore ties (no official pick)
+    const sideTag = (s.home > s.away) ? 'HOME' : 'AWAY';
+    rows.push({
+      id: g.id,
+      week: gWeek(g),
+      winner_ats: gWinnerAtsRaw(g),
+      strength: diff,
+      consensusSide: sideTag
+    });
+  });
+  return rows;
+}
+// Use the same helper as Picks/Group pages if present
+function renderTeamLogo(teamName){
+  try {
+    if (typeof makeTeamLogoOnly === 'function') {
+      const el = makeTeamLogoOnly(teamName);
+      if (el && el.outerHTML) return el.outerHTML;
+    }
+  } catch(e){}
+  return ''; // fallback: no logo
+}
+/* ---------- Dataset renderers ---------- */
+
+// A) Consensus by Rank (1..16) — cumulative W-L-P for consensus side
+function renderConsensusByRank(){
+  const cons = buildConsensusIndex();
+  // per-week rankings by strength desc
+  const byWeek = new Map();
+  cons.forEach(r => {
+    const list = byWeek.get(r.week) || [];
+    list.push(r);
+    byWeek.set(r.week, list);
+  });
+  // assign ranks per week
+  const rankAgg = new Map(); // rank -> {w,l,p}
+  byWeek.forEach(list => {
+    list.sort((a,b)=>byDesc(a.strength, b.strength));
+    list.forEach((r, idx) => {
+      const rank = idx+1;
+      const g = ALL_GAMES.find(x=>x.id===r.id);
+      if (!g) return;
+      const res = resultForSide(g, r.consensusSide);
+      const agg = rankAgg.get(rank) || {w:0,l:0,p:0};
+      if (res==='W') agg.w++;
+      else if (res==='L') agg.l++;
+      else agg.p++;
+      rankAgg.set(rank, agg);
+    });
+  });
+
+  // build table
+  const ranks = Array.from(rankAgg.keys()).sort((a,b)=>a-b);
+  el.thead.innerHTML = `
+    <tr>
+      <th class="center">Rank</th>
+      <th class="center">Win</th>
+      <th class="center">Loss</th>
+      <th class="center">Push</th>
+      <th class="center">+/-</th>
+    </tr>`;
+  el.tbody.innerHTML = ranks.map(r=>{
+    const a = rankAgg.get(r);
+    const diff = a.w - a.l;
+    return `<tr>
+      <td class="center">${r}</td>
+      <td class="center">${fmtInt(a.w)}</td>
+      <td class="center">${fmtInt(a.l)}</td>
+      <td class="center">${fmtInt(a.p)}</td>
+      <td class="center">${fmtSign(diff)}</td>
+    </tr>`;
+  }).join('');
+
+  // totals
+  const tot = Array.from(rankAgg.values())
+    .reduce((t,a)=>({w:t.w+a.w,l:t.l+a.l,p:t.p+a.p}),{w:0,l:0,p:0});
+  const totDiff = tot.w - tot.l;
+  el.tfoot.innerHTML = `
+    <tr>
+      <td class="center"><span class="pill total">Total</span></td>
+      <td class="center">${fmtInt(tot.w)}</td>
+      <td class="center">${fmtInt(tot.l)}</td>
+      <td class="center">${fmtInt(tot.p)}</td>
+      <td class="center">${fmtSign(totDiff)}</td>
+    </tr>`;
+}
+
+
+// B) Record by User Agreement (1..6) — W-L-P for consensus side per agreeCount
+function renderAgreement(){
+  const cons = buildConsensusIndex(); // per-game consensusSide + strength (ties removed)
+
+  // Index games and picks
+  const gamesById = new Map(ALL_GAMES.map(g=>[g.id,g]));
+  const picksByGame = new Map();
+  ALL_PICKS.forEach(p => {
+    const arr = picksByGame.get(p.game_id) || [];
+    arr.push(p);
+    picksByGame.set(p.game_id, arr);
+  });
+
+  // Buckets: 1..6 users on the consensus side
+  const buckets = new Map([[1,{w:0,l:0,p:0}],
+                           [2,{w:0,l:0,p:0}],
+                           [3,{w:0,l:0,p:0}],
+                           [4,{w:0,l:0,p:0}],
+                           [5,{w:0,l:0,p:0}],
+                           [6,{w:0,l:0,p:0}]]);
+
+  cons.forEach(r => {
+    const g = gamesById.get(r.id);
+    if (!g) return;
+    const picks = picksByGame.get(r.id) || [];
+
+    // count users whose pick matches the consensus side
+    const agree = picks.reduce((acc, p)=>{
+      const side = (p.team === gHomeName(g)) ? 'HOME'
+                : (p.team === gAwayName(g)) ? 'AWAY' : '';
+      return acc + (side === r.consensusSide ? 1 : 0);
+    }, 0);
+
+    const bucket = buckets.get(agree);
+    if (!bucket) return; // ignore zero-agreement (shouldn't occur with strength>0)
+
+    const res = resultForSide(g, r.consensusSide);
+    if (res === 'W') bucket.w++;
+    else if (res === 'L') bucket.l++;
+    else if (res === 'P') bucket.p++;
+  });
+
+  // Header: Win/Loss/Push + new +/- column
+  el.thead.innerHTML = `
+    <tr>
+      <th class="center">Users on Side</th>
+      <th class="center">Win</th>
+      <th class="center">Loss</th>
+      <th class="center">Push</th>
+      <th class="center">+/-</th>
+    </tr>`;
+
+  // Rows: show 6..1 with +/- = W - L
+  const rows = [6,5,4,3,2,1].map(n=>{
+    const a = buckets.get(n) || {w:0,l:0,p:0};
+    const diff = a.w - a.l;
+    return `<tr>
+      <td class="center">${n}</td>
+      <td class="center">${fmtInt(a.w)}</td>
+      <td class="center">${fmtInt(a.l)}</td>
+      <td class="center">${fmtInt(a.p)}</td>
+      <td class="center">${fmtSign(diff)}</td>
+    </tr>`;
+  }).join('');
+  el.tbody.innerHTML = rows;
+
+  // Totals row
+  const tot = Array.from(buckets.values())
+    .reduce((t,a)=>({w:t.w+a.w,l:t.l+a.l,p:t.p+a.p}),{w:0,l:0,p:0});
+  const totDiff = tot.w - tot.l;
+
+  el.tfoot.innerHTML = `
+    <tr>
+      <td class="center"><span class="pill total">Total</span></td>
+      <td class="center">${fmtInt(tot.w)}</td>
+      <td class="center">${fmtInt(tot.l)}</td>
+      <td class="center">${fmtInt(tot.p)}</td>
+      <td class="center">${fmtSign(totDiff)}</td>
+    </tr>`;
+}
+
+// C) User → Team (W-L-P + Team ATS +/-)
+// Default sort: teams the user has picked (by times picked desc), then never-picked teams by team ATS +/- desc
+function renderUserTeam(){
+  const currentUser = el.userSel.value || USERS[0] || '';
+  const gById = new Map(ALL_GAMES.map(g=>[g.id,g]));
+  const picks = ALL_PICKS.filter(p => p.username === currentUser);
+
+  // team -> { w,l,p, countPicked, weightSum, weightCount, ats }
+  const perTeam = new Map();
+  function ensureTeam(name){
+    if (!perTeam.has(name)) perTeam.set(name, { w:0,l:0,p:0, countPicked:0, weightSum:0, weightCount:0, ats:0 });
+  }
+
+  // ensure all teams appear
+  ALL_GAMES.forEach(g=>{
+    const h = gHomeName(g); if (h) ensureTeam(h);
+    const a = gAwayName(g); if (a) ensureTeam(a);
+  });
+
+  // user picks → W/L/P for the team picked; +/-weight for both teams in that game
+  picks.forEach(p => {
+    const g = gById.get(p.game_id);
+    if (!g) return;
+    const home = gHomeName(g), away = gAwayName(g);
+    const side = (p.team === home) ? 'HOME' : (p.team === away ? 'AWAY' : '');
+    if (!side) return;
+
+    const conf = Number(p.confidence||0);
+    const pickedTeam = (side==='HOME') ? home : away;
+    const oppTeam    = (side==='HOME') ? away : home;
+
+    // W/L/P only when the user picked that team
+    const rec = perTeam.get(pickedTeam);
+    const res = resultForSide(g, side);
+    if (res === 'W') rec.w++; else if (res === 'L') rec.l++; else if (res === 'P') rec.p++;
+    rec.countPicked++;
+
+    // Average Weight contributions (one per game involving that team that the user picked):
+    // picked team gets +conf; opponent gets -conf
+    const rPicked = perTeam.get(pickedTeam);
+    rPicked.weightSum += conf;  rPicked.weightCount += 1;
+
+    const rOpp = perTeam.get(oppTeam);
+    rOpp.weightSum -= conf;     rOpp.weightCount += 1;
+  });
+
+  // Team ATS +/- (independent of user)
+  const teamAts = new Map();
+  function addAts(team, delta){ teamAts.set(team, (teamAts.get(team)||0) + delta); }
+  ALL_GAMES.forEach(g=>{
+    const h = homeAtsMargin(g);
+    if (h == null) return;
+    addAts(gHomeName(g),  h);
+    addAts(gAwayName(g), -h);
+  });
+  perTeam.forEach((rec, team)=>{ rec.ats = teamAts.get(team) || 0; });
+
+  // build rows with avg weight
+  const rows = [];
+  perTeam.forEach((rec, team)=>{
+    const avg = rec.weightCount > 0 ? (rec.weightSum / rec.weightCount) : 0;
+    rows.push({ team, w:rec.w, l:rec.l, p:rec.p, ats:rec.ats, avg, picked:rec.countPicked });
+  });
+
+  // sort by Average Weight (desc), then times picked (desc), then name
+  rows.sort((a,b)=>{
+    const d = b.avg - a.avg; if (Math.abs(d)>1e-9) return d;
+    if (b.picked !== a.picked) return b.picked - a.picked;
+    return a.team.localeCompare(b.team);
+  });
+
+  // header (adds Average Weight between Push and ATS)
+  el.thead.innerHTML = `
+    <tr>
+      <th>Team</th>
+      <th class="center">Win</th>
+      <th class="center">Loss</th>
+      <th class="center">Push</th>
+      <th class="center">Average Weight</th>
+      <th class="right">ATS +/-</th>
+    </tr>`;
+
+  // body (keeps logo + centered team cell)
+  el.tbody.innerHTML = rows.map(r => {
+    const logoHtml = (typeof renderTeamLogo === 'function') ? renderTeamLogo(r.team) : '';
+    return `
+      <tr>
+        <td><div class="team-cell">${logoHtml}<span>${r.team}</span></div></td>
+        <td class="center">${fmtInt(r.w)}</td>
+        <td class="center">${fmtInt(r.l)}</td>
+        <td class="center">${fmtInt(r.p)}</td>
+        <td class="center">${fmt1(r.avg)}</td>
+        <td class="center">${fmt1dp(r.ats)}</td>
+      </tr>`;
+  }).join('');
+
+  // totals (no average)
+  const tot = rows.reduce((t,r)=>({w:t.w+r.w,l:t.l+r.l,p:t.p+r.p}),{w:0,l:0,p:0});
+  el.tfoot.innerHTML = `
+    <tr>
+      <td class="center"><span class="pill total">Total</span></td>
+      <td class="center">${fmtInt(tot.w)}</td>
+      <td class="center">${fmtInt(tot.l)}</td>
+      <td class="center">${fmtInt(tot.p)}</td>
+      <td class="center"></td>
+      <td class="right"></td>
+    </tr>`;
+}
+
+/* ---------- Render dispatcher ---------- */
+function render(){
+  el.tfoot.innerHTML = '';
+  const v = el.dataset.value;
+  if (v === 'consensusByRank') return renderConsensusByRank();
+  if (v === 'agreement')      return renderAgreement();
+  if (v === 'userTeam')       return renderUserTeam();
+}
+
+/* ---------- Kickoff ---------- */
+initResults().catch(err=>{
+  console.error(err);
+  el.thead.innerHTML = '';
+  el.tbody.innerHTML = `<tr><td>Failed to load Results: ${String(err && err.message || err)}</td></tr>`;
+});
+</script>
+</body>
+</html>
