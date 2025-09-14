@@ -315,14 +315,6 @@ function renderTeamLogo(teamName){
   return ''; // fallback: no logo
 }
 
-// Map full team name -> abbreviation (via TEAM_LOGOS if available; fallback derives initials)
-function teamAbbr(teamName){
-  const m = (window.TEAM_LOGOS && window.TEAM_LOGOS[teamName]) || null;
-  if (m && (m.abbr || m.short || m.code)) return (m.abbr || m.short || m.code);
-  return String(teamName||'')
-    .split(/\s+/).map(w=>w[0]||'').join('').toUpperCase().slice(0,4);
-}
-
 /* ---------- Dataset renderers ---------- */
 
 // A) Consensus by Rank (1..16) — cumulative W-L-P for consensus side
@@ -559,7 +551,7 @@ function renderUserTeam(){
           <div class="team-cell">
             ${logoHtml}
             <span class="team-name">${r.team}</span>
-            <span class="team-abbr">${teamAbbr(r.team)}</span>
+            <span class="team-abbr">${window.teamAbbr(r.team)}</span>
           </div>
         </td>
         <td class="center">${fmtInt(r.w)}</td>
