@@ -151,6 +151,13 @@ const el = {
   tfoot:    document.getElementById('results-foot'),
   table:    document.getElementById('results-table'),
 };
+// BB:RESULTS:TEAM_LOGOS_SHIM_START
+// common.js defines TEAM_LOGOS as a global const (not on window). teamAbbr() reads window.TEAM_LOGOS.
+// Expose the const on window so teamAbbr() uses the real mapping.
+if (!window.TEAM_LOGOS && typeof TEAM_LOGOS !== 'undefined') {
+  window.TEAM_LOGOS = TEAM_LOGOS;
+}
+// BB:RESULTS:TEAM_LOGOS_SHIM_END
 
 let ALL_GAMES = [];
 let ALL_PICKS = [];
