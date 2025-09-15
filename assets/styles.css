@@ -1118,7 +1118,7 @@ header { text-align: initial; } /* stomp any accidental centering */
 }
 
 /* BB:CSS:PICKS:MOBILE_TIGHTEN */
-@media (max-width: 725px), (hover: none) and (pointer: coarse) {
+@media (max-width: 680px), (hover: none) and (pointer: coarse) {
   /* Make column sizing predictable */
   #picks-table { table-layout: fixed; width: 100%; }
 
@@ -1316,7 +1316,7 @@ header { text-align: initial; } /* stomp any accidental centering */
 #picks-table td:nth-child(3) .pick-select { display: block; margin: 0 auto; }
 
 /* BB:CSS:PICKS:MOBILE_SPACING_OVERRIDE */
-@media (max-width: 725px), (hover:none) and (pointer:coarse) {
+@media (max-width: 680px), (hover:none) and (pointer:coarse) {
   /* Narrow the @ column and shrink gaps */
   .matchup-grid {
     grid-template-columns: minmax(0,1fr) 12px minmax(0,1fr) !important;
