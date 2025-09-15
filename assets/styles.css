@@ -1314,3 +1314,15 @@ header { text-align: initial; } /* stomp any accidental centering */
 /* Picks desktop: lock Your Pick centering */
 #picks-table td:nth-child(3) { text-align: center; }
 #picks-table td:nth-child(3) .pick-select { display: block; margin: 0 auto; }
+
+/* BB:CSS:PICKS:MOBILE_SPACING_OVERRIDE */
+@media (max-width: 800px), (hover:none) and (pointer:coarse) {
+  /* Narrow the @ column and shrink gaps */
+  .matchup-grid {
+    grid-template-columns: minmax(0,1fr) 12px minmax(0,1fr) !important;
+    column-gap: 2px !important;
+  }
+  /* Tighten image-to-text spacing next to team names */
+  .matchup-away img { margin-left: 2px !important; }
+  .matchup-home img { margin-right: 2px !important; }
+}
